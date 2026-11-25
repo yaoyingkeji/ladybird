@@ -98,11 +98,19 @@ jobs:
           sudo swapon /swapfile-extra || echo "::warning::Could not enable the extra swap file"
           free -h
 
+      - name: Prefer Clang 22
+        run: |
+          # The runner already provides a clang alternative (18), so update-alternatives keeps it.
+          # Put LLVM 22 first in PATH before install-build-dependencies.sh runs its version check.
+          sudo ln -sf /usr/bin/clang-22 /usr/local/bin/clang
+          sudo ln -sf /usr/bin/clang++-22 /usr/local/bin/clang++
+
       - name: Install build dependencies
         run: |
           sudo --preserve-env=GITHUB_ENV,GITHUB_PATH,DEBIAN_FRONTEND \
             bash ./Meta/Docker/ci/install-build-dependencies.sh
           sudo apt-get install -y --no-install-recommends ccache
+          clang --version
 
       - name: Set up Python environment
         run: |
@@ -128,14 +136,14 @@ jobs:
 
       - name: Install vcpkg dependencies
         env:
-          CC: clang
-          CXX: clang++
+          CC: /usr/bin/clang-22
+          CXX: /usr/bin/clang++-22
         run: ./Meta/ladybird.py vcpkg --preset Distribution
 
       - name: Configure
         env:
-          CC: clang
-          CXX: clang++
+          CC: /usr/bin/clang-22
+          CXX: /usr/bin/clang++-22
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           cmake --preset Distribution -B Build \
@@ -144,8 +152,8 @@ jobs:
             -DLADYBIRD_ENABLE_UPDATE_CHECK=OFF \
             -DLAGOM_LINK_POOL_SIZE=2 \
             -DPython3_EXECUTABLE="$PYTHON_BIN" \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER=/usr/bin/clang-22 \
+            -DCMAKE_CXX_COMPILER=/usr/bin/clang++-22 \
             "-DLADYBIRD_VERSION=${VERSION}"
           df -h /
 
