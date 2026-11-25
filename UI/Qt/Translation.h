@@ -8,6 +8,7 @@
 
 #include <AK/StringView.h>
 #include <QString>
+#include <QTranslator>
 
 namespace Ladybird {
 
@@ -18,5 +19,16 @@ QString localize(char const* text);
 
 // Whether a translation table is active. Useful for tests and for choosing language-dependent assets.
 bool ui_translation_enabled();
+
+// Routes Qt's tr() lookups through the same dictionary, so widgets that use tr() are translated without touching
+// their call sites. Install one instance on the application object.
+class DictionaryTranslator final : public QTranslator {
+public:
+    explicit DictionaryTranslator(QObject* parent = nullptr);
+    ~DictionaryTranslator() override = default;
+
+    QString translate(char const* context, char const* source_text, char const* disambiguation = nullptr, int n = -1) const override;
+    bool isEmpty() const override;
+};
 
 }

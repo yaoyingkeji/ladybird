@@ -1117,6 +1117,9 @@ ErrorOr<int> Application::execute() { return hub().execute(); }
 Application::Application()
 {
     s_the = this;
+
+    // Translate Qt's tr() strings with the same table that the menus and dialogs use.
+    installTranslator(new DictionaryTranslator(this));
 }
 
 Application::~Application()
