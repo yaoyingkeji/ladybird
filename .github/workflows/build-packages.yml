@@ -91,10 +91,11 @@ jobs:
 
       - name: Add swap space
         run: |
-          sudo fallocate -l 8G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          # The runner image may already have an active /swapfile, so use our own path and never fail the job here.
+          sudo fallocate -l 8G /swapfile-extra || sudo dd if=/dev/zero of=/swapfile-extra bs=1M count=8192
+          sudo chmod 600 /swapfile-extra
+          sudo mkswap /swapfile-extra
+          sudo swapon /swapfile-extra || echo "::warning::Could not enable the extra swap file"
           free -h
 
       - name: Install build dependencies
