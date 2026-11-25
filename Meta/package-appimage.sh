@@ -43,7 +43,9 @@ case "$architecture" in
 esac
 
 name="ladybird-${version}-Linux-${architecture}.AppImage"
-update_information="zsync|https://download.ladybird.org/linux/latest/ladybird-Linux-${architecture}.AppImage.zsync"
+# Override with APPIMAGE_UPDATE_URL to point the built-in updater elsewhere, or set it to an empty string to
+# build an AppImage without update information (forks that do not publish to download.ladybird.org).
+update_information="${APPIMAGE_UPDATE_URL-zsync|https://download.ladybird.org/linux/latest/ladybird-Linux-${architecture}.AppImage.zsync}"
 
 work_directory=$(mktemp -d)
 trap 'rm -rf "$work_directory"' EXIT
@@ -83,5 +85,10 @@ done < <(find "$appdir/usr/lib" -mindepth 2 -type f -name '*.so*')
 
 ln -sf usr/bin/Ladybird "$appdir/AppRun"
 
+appimagetool_arguments=()
+if [ -n "$update_information" ]; then
+    appimagetool_arguments+=(-u "$update_information")
+fi
+
 ARCH="$architecture" "$work_directory/appimagetool" --no-appstream --runtime-file "$work_directory/runtime" \
-    -u "$update_information" "$appdir" "$output_directory/$name"
+    "${appimagetool_arguments[@]}" "$appdir" "$output_directory/$name"
