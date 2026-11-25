@@ -151,7 +151,6 @@ jobs:
             -DLADYBIRD_BASELINE_CPU_TARGET=ON \
             -DLADYBIRD_BUILD_QT=ON \
             -DLADYBIRD_ENABLE_UPDATE_CHECK=OFF \
-            -DLAGOM_LINK_POOL_SIZE=2 \
             -DPython3_EXECUTABLE="$PYTHON_BIN_DIR/python" \
             -DCMAKE_C_COMPILER=/usr/bin/clang-22 \
             -DCMAKE_CXX_COMPILER=/usr/bin/clang++-22 \
