@@ -338,7 +338,7 @@
     }
 
     function ui_language_is_chinese() {
-        const override = window.__ladybirdLanguage ?? new URLSearchParams(location.search).get("lang");
+        const override = window.__ladybirdLanguage || new URLSearchParams(location.search).get("lang");
         const language = override || navigator.language || (navigator.languages && navigator.languages[0]) || "";
         return language.toLowerCase().startsWith("zh");
     }
