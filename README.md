@@ -35,6 +35,20 @@ chmod +x ladybird-*.AppImage && ./ladybird-*.AppImage
 
 构建环境：Ubuntu 24.04、Clang、`Distribution` preset（LTO，Qt 由 vcpkg 构建），运行要求 glibc ≥ 2.39。
 Build environment: Ubuntu 24.04 with Clang and the `Distribution` preset (LTO, Qt from vcpkg); requires glibc ≥ 2.39.
+
+### 中文界面 / Chinese interface
+
+`auto-build` 分支加入了简体中文界面：菜单、地址栏、查找栏、下载与书签、权限提示、设置页、历史页、证书警告、崩溃报告等均已翻译；未收录的文本自动回退英文。
+The `auto-build` branch adds a Simplified Chinese interface: menus, address bar, find bar, downloads and bookmarks, permission prompts, built-in settings/history pages, certificate warnings, crash reports and more. Untranslated text falls back to English.
+
+系统语言为 `zh_*` 时自动启用；也可单独指定 / Enabled automatically when the system locale is `zh_*`, or force it with:
+
+```bash
+LADYBIRD_LANGUAGE=zh-CN ladybird
+```
+
+内置页面按浏览器的 `navigator.language` 判断语言；如需覆盖，可在页面 URL 后加 `?lang=zh-CN`。
+Built-in pages use the browser's `navigator.language`; append `?lang=zh-CN` to the page URL to override it.
 更新检查与 AppImage 自更新已关闭，构建未做代码签名。/ Update checks and AppImage self-updates are disabled; builds are not code signed.
 
 ## Features
