@@ -14,6 +14,7 @@
 #include <UI/Qt/StringUtils.h>
 #include <UI/Qt/Tab.h>
 #include <UI/Qt/Theme.h>
+#include <UI/Qt/Translation.h>
 #include <UI/Qt/WebContentView.h>
 
 #include <QAction>
@@ -50,13 +51,13 @@ public:
     virtual void on_text_changed(Action& action) override
     {
         if (m_action)
-            m_action->setText(qstring_from_ak_string(action.text()));
+            m_action->setText(localize(action.text()));
     }
 
     virtual void on_tooltip_changed(Action& action) override
     {
         if (m_action)
-            m_action->setToolTip(qstring_from_ak_string(action.tooltip()));
+            m_action->setToolTip(localize(action.tooltip()));
     }
 
     virtual void on_enabled_state_changed(Action& action) override
@@ -457,7 +458,7 @@ void populate_session_history_traversal_menu(QMenu& menu, WebContentView& view, 
 
 QMenu* create_application_menu(QWidget& parent, Menu& menu)
 {
-    auto* application_menu = new QMenu(qstring_from_ak_string(menu.title()), &parent);
+    auto* application_menu = new QMenu(localize(menu.title()), &parent);
     menu.add_observer(MenuObserver::create(menu, *application_menu));
     add_properties(*application_menu, menu);
     add_items_to_menu(*application_menu, menu);
@@ -611,7 +612,7 @@ MenuZoomRow::MenuZoomRow(QMenu& menu, QAction& zoom_out, QAction& reset_zoom, QA
     auto* layout = new QHBoxLayout(row);
     layout->setContentsMargins(10, 3, 10, 3);
     layout->setSpacing(2);
-    layout->addWidget(new QLabel("Zoom", row), 1);
+    layout->addWidget(new QLabel(localize("Zoom"), row), 1);
 
     auto add_button = [&](char const* object_name, QString const& tooltip, QAction& action) {
         auto* button = new QPushButton(row);
@@ -623,13 +624,13 @@ MenuZoomRow::MenuZoomRow(QMenu& menu, QAction& zoom_out, QAction& reset_zoom, QA
         layout->addWidget(button);
         return button;
     };
-    m_zoom_out = add_button("LadybirdMenuZoomButton", "Zoom Out", zoom_out);
-    auto* level = add_button("LadybirdMenuZoomLevel", "Reset Zoom", reset_zoom);
+    m_zoom_out = add_button("LadybirdMenuZoomButton", localize("Zoom Out"), zoom_out);
+    auto* level = add_button("LadybirdMenuZoomLevel", localize("Reset Zoom"), reset_zoom);
     // NB: The level is drawn in figures of one width, so it doesn't shift as it changes.
     auto level_font = level->font();
     level_font.setFeature(QFont::Tag("tnum"), 1);
     level->setFont(level_font);
-    m_zoom_in = add_button("LadybirdMenuZoomButton", "Zoom In", zoom_in);
+    m_zoom_in = add_button("LadybirdMenuZoomButton", localize("Zoom In"), zoom_in);
 
     auto update_level = [&zoom_level, level] {
         // The address bar hides its zoom action at the default level and keeps its last text.

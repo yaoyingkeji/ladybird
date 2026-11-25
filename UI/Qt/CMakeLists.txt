@@ -71,6 +71,7 @@ add_library(ladybird_impl STATIC
     Tab.cpp
     TabBar.cpp
     Theme.cpp
+    Translation.cpp
     VersionPage.cpp
     WebCompatReportReview.cpp
     WebContentView.cpp

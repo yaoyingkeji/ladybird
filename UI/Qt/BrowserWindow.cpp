@@ -38,6 +38,7 @@
 #endif
 #include <UI/Qt/TabBar.h>
 #include <UI/Qt/Theme.h>
+#include <UI/Qt/Translation.h>
 #include <UI/Qt/WebContentView.h>
 #include <UI/Qt/WindowControlButton.h>
 
@@ -569,7 +570,7 @@ void BrowserWindow::initialize_ladybird_menu()
 
     m_ladybird_menu->addMenu(application.history_menu());
     m_ladybird_menu->addMenu(application.bookmarks_menu());
-    auto* downloads_action = m_ladybird_menu->addAction("Downloads");
+    auto* downloads_action = m_ladybird_menu->addAction(localize("Downloads"));
     downloads_action->setShortcutVisibleInContextMenu(true);
     // NB: The application's own downloads action owns the shortcut. This item only shows it.
 #if defined(AK_OS_MACOS)
@@ -637,7 +638,7 @@ void BrowserWindow::initialize_window_context_menu()
     m_window_context_menu->addSeparator();
 
     // The tab layouts of Settings, with the sidebar's side made part of the choice.
-    auto* tab_layout_menu = m_window_context_menu->addMenu("Tab &Layout");
+    auto* tab_layout_menu = m_window_context_menu->addMenu(localize("Tab &Layout"));
     m_tab_layout_actions = new QActionGroup(this);
     auto add_tab_layout = [&](char const* text, TabLayoutChoice choice) {
         auto* action = tab_layout_menu->addAction(text);
@@ -803,7 +804,7 @@ Tab& BrowserWindow::create_restored_tab(RestoredSessionTab const& restored, int 
 
     if (!m_current_tab)
         set_current_tab(tab);
-    m_tabs_container->insert_tab(index, tab, "New Tab");
+    m_tabs_container->insert_tab(index, tab, localize("New Tab"));
     initialize_tab(tab);
 
     auto history = session().load_tab_history(restored.tab_id);
@@ -825,7 +826,7 @@ Tab& BrowserWindow::create_new_tab(Web::HTML::ActivateTab activate_tab, Optional
         set_current_tab(tab);
     }
 
-    m_tabs_container->add_tab(tab, "New Tab");
+    m_tabs_container->add_tab(tab, localize("New Tab"));
     if (activate_tab == Web::HTML::ActivateTab::Yes)
         m_tabs_container->set_current_tab(tab);
 
@@ -881,7 +882,7 @@ Tab& BrowserWindow::create_new_tab(Web::HTML::ActivateTab activate_tab, TabLocat
         break;
     }
     // A new tab is unpinned, so it never lands inside the pinned group.
-    m_tabs_container->insert_tab(constrain_insertion_index(insertion_index, false), tab, "New Tab");
+    m_tabs_container->insert_tab(constrain_insertion_index(insertion_index, false), tab, localize("New Tab"));
 
     if (activate_tab == Web::HTML::ActivateTab::Yes)
         m_tabs_container->set_current_tab(tab);
@@ -973,7 +974,7 @@ void BrowserWindow::adopt_tab(Tab& tab, int index)
     index = constrain_insertion_index(index, tab.is_pinned());
 
     tab.set_window(*this);
-    m_tabs_container->insert_tab(index, &tab, "New Tab");
+    m_tabs_container->insert_tab(index, &tab, localize("New Tab"));
     if (tab.is_loaded())
         tab.view().finish_window_move();
     if (!m_session_window_id.has_value())

@@ -73,6 +73,7 @@
 #include <UI/Qt/StringUtils.h>
 #include <UI/Qt/Tab.h>
 #include <UI/Qt/Theme.h>
+#include <UI/Qt/Translation.h>
 #include <UI/Qt/VersionPage.h>
 #include <UI/Qt/WebContentView.h>
 #include <UI/Qt/WebUIPage.h>
@@ -557,7 +558,7 @@ public:
         m_inspect_menu = create_application_menu(*m_application_widget, application.inspect_menu());
         m_debug_menu = create_application_menu(*m_application_widget, application.debug_menu());
 
-        m_help_menu = new QMenu("Help", m_application_widget);
+        m_help_menu = new QMenu(localize("Help"), m_application_widget);
         m_help_menu->addAction(create_application_action(*m_application_widget, application.report_website_issue_action(), IncludeActionIcon::No));
         m_help_menu->addSeparator();
         m_help_menu->addAction(create_application_action(*m_application_widget, application.open_about_page_action(), IncludeActionIcon::No));
@@ -605,12 +606,12 @@ public:
         // NB: AppKit lists the application's windows in the dock menu by itself.
         m_dock_menu = new QMenu(m_menu_bar);
 
-        auto* new_window_action = m_dock_menu->addAction("New Window");
+        auto* new_window_action = m_dock_menu->addAction(localize("New Window"));
         QObject::connect(new_window_action, &QAction::triggered, m_dock_menu, [] {
             Application::the().open_new_window(WebView::IsPrivate::No);
         });
 
-        auto* new_private_window_action = m_dock_menu->addAction("New Private Window");
+        auto* new_private_window_action = m_dock_menu->addAction(localize("New Private Window"));
         QObject::connect(new_private_window_action, &QAction::triggered, m_dock_menu, [] {
             Application::the().open_new_window(WebView::IsPrivate::Yes);
         });
@@ -3141,7 +3142,7 @@ QMenuBar* Application::create_application_menu_bar(ForBrowserWindow for_browser_
     auto& application = ApplicationActions::the();
     auto* menu_bar = new QMenuBar();
 
-    auto* file_menu = menu_bar->addMenu("&File");
+    auto* file_menu = menu_bar->addMenu(localize("&File"));
     file_menu->addAction(new_tab_action());
     file_menu->addAction(new_window_action());
     file_menu->addAction(new_private_window_action());
@@ -3156,7 +3157,7 @@ QMenuBar* Application::create_application_menu_bar(ForBrowserWindow for_browser_
     file_menu->addSeparator();
     file_menu->addAction(quit_action());
 
-    auto* edit_menu = menu_bar->addMenu("&Edit");
+    auto* edit_menu = menu_bar->addMenu(localize("&Edit"));
     if (for_browser_window == ForBrowserWindow::Yes) {
         edit_menu->addAction(create_application_action(*menu_bar, application.undo_action(), IncludeActionIcon::No));
         edit_menu->addAction(create_application_action(*menu_bar, application.redo_action(), IncludeActionIcon::No));
@@ -3176,7 +3177,7 @@ QMenuBar* Application::create_application_menu_bar(ForBrowserWindow for_browser_
     }
     edit_menu->addAction(open_settings_action());
 
-    auto* view_menu = menu_bar->addMenu("&View");
+    auto* view_menu = menu_bar->addMenu(localize("&View"));
     if (for_browser_window == ForBrowserWindow::Yes) {
         view_menu->addAction(open_next_tab_action());
         view_menu->addAction(open_previous_tab_action());
@@ -3199,14 +3200,14 @@ QMenuBar* Application::create_application_menu_bar(ForBrowserWindow for_browser_
         view_menu->addAction(move_focus_action());
         view_menu->addSeparator();
 
-        auto* zoom_menu = view_menu->addMenu("&Zoom");
+        auto* zoom_menu = view_menu->addMenu(localize("&Zoom"));
         zoom_menu->addAction(zoom_in_action());
         zoom_menu->addAction(zoom_out_action());
         zoom_menu->addAction(reset_zoom_action());
 
         // The translation menu is the active tab's, so it's filled in as it opens.
         if (Application::the().has_translator()) {
-            auto* translation_menu = view_menu->addMenu("&Translation");
+            auto* translation_menu = view_menu->addMenu(localize("&Translation"));
             QObject::connect(translation_menu, &QMenu::aboutToShow, translation_menu, [translation_menu] {
                 if (auto* tab = Application::the().active_tab())
                     repopulate_application_menu(*translation_menu, tab->view().translation_menu());
@@ -3233,7 +3234,7 @@ QMenuBar* Application::create_application_menu_bar(ForBrowserWindow for_browser_
     } else {
         // NB: The Task Manager needs no browser window, so it can be opened while none is focused, such as right after
         //     it was closed.
-        auto* inspect_menu = menu_bar->addMenu("&Inspect");
+        auto* inspect_menu = menu_bar->addMenu(localize("&Inspect"));
         inspect_menu->addAction(create_application_action(*inspect_menu, *m_open_task_manager_action, IncludeActionIcon::No));
     }
     menu_bar->addMenu(help_menu());
