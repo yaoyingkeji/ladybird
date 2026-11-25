@@ -115,10 +115,11 @@ jobs:
       - name: Set up Python environment
         run: |
           python_bin=$(python3 Meta/Utils/python_environment.py --print-bin | tr -d '\r')
-          echo "PYTHON_BIN=$python_bin" >> "$GITHUB_ENV"
-          echo "$(dirname "$python_bin")" >> "$GITHUB_PATH"
+          echo "PYTHON_BIN_DIR=$python_bin" >> "$GITHUB_ENV"
+          echo "$python_bin" >> "$GITHUB_PATH"
 
       - name: Restore vcpkg binary cache
+        id: vcpkg-cache
         uses: actions/cache@v4
         with:
           path: Build/caches/vcpkg-binary-cache
@@ -151,11 +152,18 @@ jobs:
             -DLADYBIRD_BUILD_QT=ON \
             -DLADYBIRD_ENABLE_UPDATE_CHECK=OFF \
             -DLAGOM_LINK_POOL_SIZE=2 \
-            -DPython3_EXECUTABLE="$PYTHON_BIN" \
+            -DPython3_EXECUTABLE="$PYTHON_BIN_DIR/python" \
             -DCMAKE_C_COMPILER=/usr/bin/clang-22 \
             -DCMAKE_CXX_COMPILER=/usr/bin/clang++-22 \
             "-DLADYBIRD_VERSION=${VERSION}"
           df -h /
+
+      - name: Save vcpkg binary cache
+        if: always() && steps.vcpkg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: Build/caches/vcpkg-binary-cache
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
 
       - name: Build
         run: cmake --build Build
@@ -215,6 +223,13 @@ jobs:
             Build/packages/notes.md
           archive: false
           if-no-files-found: error
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .ccache
+          key: ccache-${{ runner.os }}-${{ github.run_id }}
 
   release:
     name: Publish release
