@@ -1,0 +1,237 @@
+name: Build Packages
+
+run-name: "Build ${{ inputs.version || 'auto' }} from ${{ inputs.ref || github.ref_name }}"
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '覆盖版本号（留空则自动生成，例如 2026.47.8.auto.20261125）'
+        required: false
+        type: string
+      ref:
+        description: '要构建的分支、标签或提交'
+        required: false
+        default: 'auto-build'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-packages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Linux x86_64 packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      upstream: ${{ steps.version.outputs.upstream }}
+      commit: ${{ steps.version.outputs.commit }}
+      trigger: ${{ steps.version.outputs.trigger }}
+    env:
+      LADYBIRD_SOURCE_DIR: ${{ github.workspace }}
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 3G
+      CCACHE_COMPILERCHECK: '%compiler% -v'
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      VCPKG_FORCE_SYSTEM_BINARIES: '1'
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      # The runner image ships ~15 GB of toolchains this build never uses. Reclaiming it matters: the
+      # Distribution build (Qt via vcpkg + LTO + debug symbols) is disk hungry.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/share/boost /opt/az /usr/lib/google-cloud-sdk
+          sudo docker image prune -af || true
+          df -h /
+
+      - name: Check out
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 1
+
+      - name: Compute version
+        id: version
+        shell: bash
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          upstream_url=https://github.com/LadybirdBrowser/ladybird.git
+          upstream_sha=$(git ls-remote "$upstream_url" refs/heads/master | cut -f1)
+          upstream_tag=$(git ls-remote --tags --refs "$upstream_url" \
+            | awk -F/ '{ print $NF }' \
+            | grep -E '^[0-9]{4}\.[0-9]+\.[0-9]+$' \
+            | sort -V | tail -1 || true)
+          upstream_tag=${upstream_tag:-0.0.0}
+
+          version=${VERSION_INPUT:-}
+          if [ -z "$version" ]; then
+            version="${upstream_tag}.auto.$(date -u +%Y%m%d)"
+          fi
+
+          commit=$(git rev-parse HEAD)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=auto-$version" >> "$GITHUB_OUTPUT"
+          echo "upstream=${upstream_tag}@${upstream_sha:0:12}" >> "$GITHUB_OUTPUT"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "trigger=$GITHUB_EVENT_NAME" >> "$GITHUB_OUTPUT"
+          echo "Building $version from ${commit:0:12} (upstream ${upstream_tag}@${upstream_sha:0:12})"
+
+      - name: Add swap space
+        run: |
+          sudo fallocate -l 8G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
+      - name: Install build dependencies
+        run: |
+          sudo --preserve-env=GITHUB_ENV,GITHUB_PATH,DEBIAN_FRONTEND \
+            bash ./Meta/Docker/ci/install-build-dependencies.sh
+          sudo apt-get install -y --no-install-recommends ccache
+
+      - name: Set up Python environment
+        run: |
+          python_bin=$(python3 Meta/Utils/python_environment.py --print-bin | tr -d '\r')
+          echo "PYTHON_BIN=$python_bin" >> "$GITHUB_ENV"
+          echo "$(dirname "$python_bin")" >> "$GITHUB_PATH"
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: Build/caches/vcpkg-binary-cache
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+
+      - name: Install vcpkg dependencies
+        env:
+          CC: clang
+          CXX: clang++
+        run: ./Meta/ladybird.py vcpkg --preset Distribution
+
+      - name: Configure
+        env:
+          CC: clang
+          CXX: clang++
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cmake --preset Distribution -B Build \
+            -DLADYBIRD_BASELINE_CPU_TARGET=ON \
+            -DLADYBIRD_BUILD_QT=ON \
+            -DLADYBIRD_ENABLE_UPDATE_CHECK=OFF \
+            -DLAGOM_LINK_POOL_SIZE=2 \
+            -DPython3_EXECUTABLE="$PYTHON_BIN" \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            "-DLADYBIRD_VERSION=${VERSION}"
+          df -h /
+
+      - name: Build
+        run: cmake --build Build
+
+      - name: Install
+        run: cmake --install Build --strip --prefix "$PWD/Install"
+
+      - name: Package the Debian packages
+        working-directory: Build
+        run: |
+          cpack -G DEB -B packages \
+            -D CPACK_COMPONENTS_ALL="ladybird_Runtime;ladybird_SystemIntegration;ladybird_SystemSymbols"
+
+      - name: Package the AppImage
+        env:
+          APPIMAGE_UPDATE_URL: ''
+          VERSION: ${{ steps.version.outputs.version }}
+        run: ./Meta/package-appimage.sh Build "$VERSION" x86_64 Build/packages
+
+      - name: Write checksums
+        working-directory: Build/packages
+        run: |
+          sha256sum ./*.AppImage ./*.deb > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Generate release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+          COMMIT: ${{ steps.version.outputs.commit }}
+          UPSTREAM: ${{ steps.version.outputs.upstream }}
+          TRIGGER: ${{ steps.version.outputs.trigger }}
+        run: bash .github/scripts/release-notes.sh Build/packages > Build/packages/notes.md
+
+      - name: Upload the AppImage
+        uses: actions/upload-artifact@v7
+        with:
+          name: appimage
+          path: Build/packages/*.AppImage
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload the Debian packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: deb
+          path: Build/packages/*.deb
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload the checksums and release notes
+        uses: actions/upload-artifact@v7
+        with:
+          name: metadata
+          path: |
+            Build/packages/SHA256SUMS.txt
+            Build/packages/notes.md
+          archive: false
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download the packages
+        uses: actions/download-artifact@v8
+        with:
+          path: assets
+          merge-multiple: true
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          ls -lh assets
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create "$TAG" \
+            assets/*.AppImage assets/*.deb assets/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Ladybird $VERSION · 自动构建 / auto build" \
+            --notes-file assets/notes.md \
+            --latest
