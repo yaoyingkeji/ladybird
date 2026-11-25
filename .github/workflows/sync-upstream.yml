@@ -1,0 +1,36 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    - cron: '30 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Rebase auto-build onto upstream master
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out auto-build
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: auto-build
+          fetch-depth: 0
+
+      - name: Rebase onto upstream master
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add upstream https://github.com/LadybirdBrowser/ladybird.git
+          git fetch --no-tags upstream master
+          git fetch --tags upstream
+          git rebase upstream/master
+          git push origin HEAD:auto-build --force-with-lease
