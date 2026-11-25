@@ -38,6 +38,7 @@
 #if defined(LADYBIRD_HAS_WAYLAND_CLIENT)
 #    include <UI/Qt/WaylandWindow.h>
 #endif
+#include <UI/Qt/Translation.h>
 #include <UI/Qt/WindowControlButton.h>
 #include <UI/Qt/WindowControlsReveal.h>
 
@@ -3228,8 +3229,8 @@ TabWidget::TabWidget(WebView::IsPrivate is_private, QWidget* parent)
     m_bookmarks_menu_button->setAutoRaise(true);
     m_bookmarks_menu_button->setIconSize({ 16, 16 });
     m_bookmarks_menu_button->setFocusPolicy(Qt::NoFocus);
-    m_bookmarks_menu_button->setToolTip("Bookmarks");
-    m_bookmarks_menu_button->setAccessibleName("Bookmarks");
+    m_bookmarks_menu_button->setToolTip(localize("Bookmarks"));
+    m_bookmarks_menu_button->setAccessibleName(localize("Bookmarks"));
     m_bookmarks_menu_button->setCheckable(true);
     m_bookmarks_menu = create_application_menu(*m_bookmarks_menu_button, Application::bookmarks().menu());
     QObject::connect(m_bookmarks_menu_button, &QToolButton::clicked, this, [this] {
@@ -5767,8 +5768,8 @@ TabMicrophoneIndicator::TabMicrophoneIndicator(QWidget* parent)
     : QLabel(parent)
 {
     setObjectName("LadybirdTabMicrophone");
-    setToolTip("Using your microphone");
-    setAccessibleName("Using your microphone");
+    setToolTip(localize("Using your microphone"));
+    setAccessibleName(localize("Using your microphone"));
     setFocusPolicy(Qt::NoFocus);
     set_placement(m_placement);
     hide();

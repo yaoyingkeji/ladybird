@@ -10,6 +10,7 @@
 #include <UI/Qt/Icon.h>
 #include <UI/Qt/NativeTextEditingLineEdit.h>
 #include <UI/Qt/StringUtils.h>
+#include <UI/Qt/Translation.h>
 
 #include <QAbstractItemView>
 #include <QComboBox>
@@ -107,7 +108,7 @@ QComboBox* create_bookmark_folder_picker(QWidget* parent, ReadonlySpan<BookmarkI
     auto* folder_combo = new BookmarkFolderPicker(parent);
     auto folder_icon = create_chrome_icon(ChromeIcon::Folder, folder_combo->palette());
     folder_combo->setIconSize({ 14, 14 });
-    folder_combo->addItem(folder_icon, "Bookmarks bar", QString {});
+    folder_combo->addItem(folder_icon, localize("Bookmarks bar"), QString {});
     add_bookmark_folder_options(*folder_combo, folder_icon, folders, {}, excluded_folder_id);
     if (folder_combo->count() > 1) {
         folder_combo->insertSeparator(1);
@@ -130,16 +131,16 @@ BookmarkDialog::BookmarkDialog(QWidget* parent, Type type, Optional<URL::URL con
 
     switch (type) {
     case Type::AddBookmark:
-        setWindowTitle("Add bookmark");
+        setWindowTitle(localize("Add bookmark"));
         break;
     case Type::EditBookmark:
-        setWindowTitle("Edit bookmark");
+        setWindowTitle(localize("Edit bookmark"));
         break;
     case Type::AddFolder:
-        setWindowTitle("Add folder");
+        setWindowTitle(localize("Add folder"));
         break;
     case Type::EditFolder:
-        setWindowTitle("Edit folder");
+        setWindowTitle(localize("Edit folder"));
         break;
     }
 
@@ -161,19 +162,19 @@ BookmarkDialog::BookmarkDialog(QWidget* parent, Type type, Optional<URL::URL con
         m_url_edit = create_text_field();
         if (current_url.has_value())
             m_url_edit->setText(qstring_from_ak_string(current_url->serialize()));
-        layout->addRow("URL:", m_url_edit);
+        layout->addRow(localize("URL:"), m_url_edit);
     }
 
     m_title_edit = create_text_field();
     if (current_title.has_value())
         m_title_edit->setText(qstring_from_ak_string(*current_title));
-    layout->addRow("Title:", m_title_edit);
+    layout->addRow(localize("Title:"), m_title_edit);
 
     m_folder_combo = create_bookmark_folder_picker(this, folders, selected_folder_id, excluded_folder_id);
     m_folder_combo->setMinimumWidth(320);
     m_folder_combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    layout->addRow("Folder:", m_folder_combo);
+    layout->addRow(localize("Folder:"), m_folder_combo);
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);

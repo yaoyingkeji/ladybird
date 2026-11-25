@@ -7,6 +7,7 @@
 #include <UI/Qt/ChromeStyle.h>
 #include <UI/Qt/DevToolsBanner.h>
 #include <UI/Qt/StringUtils.h>
+#include <UI/Qt/Translation.h>
 
 #include <QEvent>
 #include <QHBoxLayout>
@@ -31,18 +32,18 @@ DevToolsBanner::DevToolsBanner(QWidget* parent)
     layout->addWidget(m_label);
     layout->addStretch();
 
-    auto* launch_client_button = new QPushButton("Open client", this);
+    auto* launch_client_button = new QPushButton(localize("Open client"), this);
     connect(launch_client_button, &QPushButton::clicked, this, &DevToolsBanner::launch_client_requested);
     layout->addWidget(launch_client_button);
 
-    auto* disable_button = new QPushButton("Disable", this);
+    auto* disable_button = new QPushButton(localize("Disable"), this);
     connect(disable_button, &QPushButton::clicked, this, &DevToolsBanner::disable_requested);
     layout->addWidget(disable_button);
 }
 
 void DevToolsBanner::set_port(u16 port)
 {
-    m_label->setText(qformatted("DevTools is enabled on port {}", port));
+    m_label->setText(localize("DevTools is enabled on port %1").arg(port));
 }
 
 bool DevToolsBanner::event(QEvent* event)

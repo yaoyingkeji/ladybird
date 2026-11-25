@@ -34,6 +34,7 @@
 #include <UI/Qt/StringUtils.h>
 #include <UI/Qt/SystemAppearance.h>
 #include <UI/Qt/Theme.h>
+#include <UI/Qt/Translation.h>
 #include <UI/Qt/WebContentView.h>
 #include <UI/Qt/WindowControlButton.h>
 #include <UI/Qt/WindowToolbar.h>
@@ -1047,10 +1048,10 @@ public:
 
         auto* header = new QHBoxLayout;
         header->setContentsMargins(10, 0, 4, 6);
-        auto* title = new QLabel("Downloads", this);
+        auto* title = new QLabel(localize("Downloads"), this);
         title->setObjectName("LadybirdDownloadsPopoverTitle");
         header->addWidget(title, 1);
-        auto* clear_button = new QPushButton("Clear finished", this);
+        auto* clear_button = new QPushButton(localize("Clear finished"), this);
         clear_button->setObjectName("LadybirdPopoverLink");
         clear_button->setCursor(Qt::PointingHandCursor);
         QObject::connect(clear_button, &QPushButton::clicked, this, [this] {
@@ -1060,7 +1061,7 @@ public:
         header->addWidget(clear_button);
         layout->addLayout(header);
 
-        m_empty_label = new QLabel("No downloads", this);
+        m_empty_label = new QLabel(localize("No downloads"), this);
         m_empty_label->setObjectName("LadybirdDownloadsEmpty");
         m_empty_label->setAlignment(Qt::AlignCenter);
         m_empty_label->setMinimumHeight(80);
@@ -1090,7 +1091,7 @@ public:
         separator_row->addWidget(separator);
         layout->addLayout(separator_row);
 
-        auto* show_all_button = new QPushButton("Show all downloads", this);
+        auto* show_all_button = new QPushButton(localize("Show all downloads"), this);
         show_all_button->setObjectName("LadybirdPopoverRow");
         QObject::connect(show_all_button, &QPushButton::clicked, this, [this] {
             if (on_open_all_downloads)

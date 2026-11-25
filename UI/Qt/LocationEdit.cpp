@@ -19,6 +19,7 @@
 #include <UI/Qt/StringUtils.h>
 #include <UI/Qt/SystemAppearance.h>
 #include <UI/Qt/Theme.h>
+#include <UI/Qt/Translation.h>
 
 #include <QAction>
 #include <QApplication>
@@ -437,8 +438,8 @@ LocationEdit::LocationEdit(QWidget* parent, WebView::Settings& settings, Nonnull
             on_zoom_requested();
     });
 
-    m_location_in_use_chip = new InUseChip(this, ChromeIcon::Location, "Using your location", "This page is using your location");
-    m_microphone_in_use_chip = new InUseChip(this, ChromeIcon::Microphone, "Using your microphone", "This page is using your microphone");
+    m_location_in_use_chip = new InUseChip(this, ChromeIcon::Location, localize("Using your location"), localize("This page is using your location"));
+    m_microphone_in_use_chip = new InUseChip(this, ChromeIcon::Microphone, localize("Using your microphone"), localize("This page is using your microphone"));
     for (auto* chip : { m_location_in_use_chip, m_microphone_in_use_chip }) {
         chip->on_size_change = [this] {
             update_text_margins();
@@ -455,7 +456,7 @@ LocationEdit::LocationEdit(QWidget* parent, WebView::Settings& settings, Nonnull
         button->installEventFilter(this);
 
     update_text_margins();
-    setPlaceholderText("Search or enter address");
+    setPlaceholderText(localize("Search or enter address"));
     update_location_icon();
 
     m_omnibox.on_display_change = [this](WebView::Omnibox::Display const& display) {
@@ -1346,7 +1347,7 @@ void LocationEdit::update_location_icon()
         m_shows_site_settings_button = true;
         m_leading_icon_button->setIconSize({ 16, 16 });
         m_leading_icon_button->setFixedSize(LOCATION_SITE_SETTINGS_BUTTON_WIDTH, LOCATION_PILL_HEIGHT);
-        m_leading_icon_button->setToolTip("Site settings");
+        m_leading_icon_button->setToolTip(localize("Site settings"));
         show_indicator(LOCATION_TEXT_MARGIN_FOR_TEXT_X);
     };
 
@@ -1355,14 +1356,14 @@ void LocationEdit::update_location_icon()
         m_leading_icon_button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         m_leading_icon_button->setIcon(create_chrome_icon(ChromeIcon::Warning, Theme::chrome(*this).warning_ink));
         m_leading_icon_button->setIconSize({ 14, 14 });
-        m_leading_icon_button->setText("Not secure");
+        m_leading_icon_button->setText(localize("Not secure"));
 
         auto font = m_leading_icon_button->font();
         font.setPixelSize(12);
         font.setWeight(QFont::Medium);
-        auto width = QFontMetrics(font).horizontalAdvance("Not secure") + 14 + 5 + LOCATION_PILL_HORIZONTAL_PADDING;
+        auto width = QFontMetrics(font).horizontalAdvance(localize("Not secure")) + 14 + 5 + LOCATION_PILL_HORIZONTAL_PADDING;
         m_leading_icon_button->setFixedSize(width, LOCATION_PILL_HEIGHT);
-        m_leading_icon_button->setToolTip("The connection to this site is not secure");
+        m_leading_icon_button->setToolTip(localize("The connection to this site is not secure"));
         // NB: The pill is wider than the icon, so the text follows it.
         show_indicator(leading_indicator_inset(*this, *m_leading_icon_button) + width + LOCATION_LEADING_ITEM_GAP - LOCATION_TEXT_PADDING);
     };

@@ -8,6 +8,7 @@
 #include <UI/Qt/ChromeStyle.h>
 #include <UI/Qt/Icon.h>
 #include <UI/Qt/Theme.h>
+#include <UI/Qt/Translation.h>
 
 #include <QAction>
 #include <QFontMetricsF>
@@ -270,7 +271,7 @@ AllTabsPopover::AllTabsPopover(QWidget* parent)
     separator_row->addWidget(separator);
     section_layout->addLayout(separator_row);
     section_layout->addSpacing(6);
-    auto* heading = new QLabel("Recently closed", m_recently_closed_section);
+    auto* heading = new QLabel(localize("Recently closed"), m_recently_closed_section);
     heading->setObjectName("LadybirdAllTabsHeading");
     heading->setContentsMargins(10, 4, 10, 4);
     section_layout->addWidget(heading);

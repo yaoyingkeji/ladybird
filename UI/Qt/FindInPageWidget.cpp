@@ -17,6 +17,7 @@
 #    include <UI/Qt/MacWindow.h>
 #endif
 #include <UI/Qt/Theme.h>
+#include <UI/Qt/Translation.h>
 #include <UI/Qt/WebContentView.h>
 
 #include <QEvent>
@@ -59,7 +60,7 @@ FindInPageWidget::FindInPageWidget(Tab* tab, WebContentView* content_view)
     , m_content_view(content_view)
 {
     setObjectName("LadybirdFindInPageBar");
-    setAccessibleName("Find in page");
+    setAccessibleName(localize("Find in page"));
 #if defined(AK_OS_MACOS)
     setAttribute(Qt::WA_DontCreateNativeAncestors);
     setAttribute(Qt::WA_NativeWindow);
@@ -88,8 +89,8 @@ FindInPageWidget::FindInPageWidget(Tab* tab, WebContentView* content_view)
     m_find_text = new NativeTextEditingLineEdit(field);
     m_find_text->setObjectName("LadybirdFindInPageText");
     m_find_text->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
-    m_find_text->setPlaceholderText("Find in page");
-    m_find_text->setAccessibleName("Find in page");
+    m_find_text->setPlaceholderText(localize("Find in page"));
+    m_find_text->setAccessibleName(localize("Find in page"));
     connect(m_find_text, &QLineEdit::textChanged, this, &FindInPageWidget::find_text_changed);
     field_layout->addWidget(m_find_text, 1);
 
@@ -112,17 +113,17 @@ FindInPageWidget::FindInPageWidget(Tab* tab, WebContentView* content_view)
         return button;
     };
 
-    m_previous_button = make_button("Previous match");
+    m_previous_button = make_button(localize("Previous match"));
     connect(m_previous_button, &QPushButton::clicked, this, [this] {
         m_content_view->find_in_page_previous_match();
     });
 
-    m_next_button = make_button("Next match");
+    m_next_button = make_button(localize("Next match"));
     connect(m_next_button, &QPushButton::clicked, this, [this] {
         m_content_view->find_in_page_next_match();
     });
 
-    m_match_case = make_button("Match case");
+    m_match_case = make_button(localize("Match case"));
     m_match_case->setText("Aa");
     m_match_case->setCheckable(true);
     connect(m_match_case, &QPushButton::toggled, this, [this] {
@@ -133,7 +134,7 @@ FindInPageWidget::FindInPageWidget(Tab* tab, WebContentView* content_view)
     separator->setObjectName("LadybirdFindInPageSeparator");
     separator->setFixedSize(1, 16);
 
-    m_exit_button = make_button("Close find");
+    m_exit_button = make_button(localize("Close find"));
     m_exit_button->setIconSize({ 12, 12 });
     connect(m_exit_button, &QPushButton::clicked, this, [this] {
         close_bar();
@@ -311,11 +312,13 @@ void FindInPageWidget::update_result_label(size_t current_match_index, Optional<
     if (total_match_count.has_value()) {
         set_has_no_matches(total_match_count.value() == 0);
 
-        auto label_text = "No matches"_string;
+        auto label_text = localize("No matches");
         if (total_match_count.value() > 0)
-            label_text = MUST(String::formatted("{} of {}", current_match_index + 1, total_match_count.value()));
+            label_text = localize("%1 of %2")
+                             .arg(static_cast<qulonglong>(current_match_index + 1))
+                             .arg(static_cast<qulonglong>(total_match_count.value()));
 
-        m_result_label->setText(qstring_from_ak_string(label_text));
+        m_result_label->setText(label_text);
         m_result_label->setVisible(true);
     } else {
         set_has_no_matches(false);

@@ -40,6 +40,7 @@
 #include <UI/Qt/SuggestionProvider.h>
 #include <UI/Qt/SystemAppearance.h>
 #include <UI/Qt/Theme.h>
+#include <UI/Qt/Translation.h>
 
 #include <QAction>
 #include <QApplication>
@@ -152,7 +153,7 @@ public:
 
         auto* footer = new QHBoxLayout;
         footer->addStretch(1);
-        auto* reset = new QPushButton("Reset", &card());
+        auto* reset = new QPushButton(localize("Reset"), &card());
         reset->setObjectName("LadybirdPopoverLink");
         reset->setCursor(Qt::PointingHandCursor);
         QObject::connect(reset, &QPushButton::clicked, this, [this] {
@@ -887,12 +888,12 @@ void Tab::create_tab_context_menu()
 {
     auto& application = ApplicationActions::the();
 
-    auto* duplicate_tab_action = new QAction("&Duplicate Tab", this);
+    auto* duplicate_tab_action = new QAction(localize("&Duplicate Tab"), this);
     QObject::connect(duplicate_tab_action, &QAction::triggered, this, [this]() {
         m_window->duplicate_tab(*this);
     });
 
-    m_pin_tab_action = new QAction("&Pin Tab", this);
+    m_pin_tab_action = new QAction(localize("&Pin Tab"), this);
     QObject::connect(m_pin_tab_action, &QAction::triggered, this, [this]() {
         if (m_is_pinned)
             m_window->unpin_tab(*this);
@@ -905,23 +906,23 @@ void Tab::create_tab_context_menu()
         m_window->new_tab_from_url(Application::settings().new_tab_page_url(), Web::HTML::ActivateTab::Yes, BrowserWindow::TabLocation::after_tab(*this));
     });
 
-    auto* mute_tab_action = new QAction("&Mute Tab", this);
+    auto* mute_tab_action = new QAction(localize("&Mute Tab"), this);
     QObject::connect(mute_tab_action, &QAction::triggered, this, [this]() {
         if (is_loaded())
             view().toggle_page_mute_state();
     });
 
-    auto* move_to_new_window_action = new QAction("Move to New &Window", this);
+    auto* move_to_new_window_action = new QAction(localize("Move to New &Window"), this);
     QObject::connect(move_to_new_window_action, &QAction::triggered, this, [this]() {
         m_window->detach_tab_to_new_window(tab_index(), m_window->mapToGlobal(QPoint(m_window->width() / 4, m_window->height() / 4)));
     });
 
-    auto* copy_link_action = new QAction("Copy &Link", this);
+    auto* copy_link_action = new QAction(localize("Copy &Link"), this);
     QObject::connect(copy_link_action, &QAction::triggered, this, [this]() {
         QGuiApplication::clipboard()->setText(qstring_from_ak_string(url().serialize()));
     });
 
-    auto* close_tab_action = new QAction("&Close Tab", this);
+    auto* close_tab_action = new QAction(localize("&Close Tab"), this);
     // NB: The shortcuts belong to the application's actions. The menu only shows them.
     close_tab_action->setShortcut(QKeySequence(QKeySequence::Close));
     close_tab_action->setShortcutContext(Qt::WidgetShortcut);
@@ -942,7 +943,7 @@ void Tab::create_tab_context_menu()
         }
     });
 
-    auto* close_other_tabs_action = new QAction("Cl&ose Other Tabs", this);
+    auto* close_other_tabs_action = new QAction(localize("Cl&ose Other Tabs"), this);
     QObject::connect(close_other_tabs_action, &QAction::triggered, this, [this]() {
         // As with closing the following tabs, activate this tab first if the current tab is among those closing.
         if (auto* current = m_window->current_tab(); current && current != this && !current->is_pinned())
@@ -974,12 +975,12 @@ void Tab::create_tab_context_menu()
 
     QObject::connect(m_context_menu, &QMenu::aboutToShow, this, [this, new_tab_action, close_following_tabs_action, mute_tab_action, move_to_new_window_action]() {
         auto is_horizontal = m_window->tab_widget().tab_bar()->tab_layout() == TabLayout::Horizontal;
-        new_tab_action->setText(is_horizontal ? "New Tab to the &Right" : "New Tab &Below");
-        close_following_tabs_action->setText(is_horizontal ? "Close Tabs to the R&ight" : "Close Tabs B&elow");
+        new_tab_action->setText(localize(is_horizontal ? "New Tab to the &Right" : "New Tab &Below"));
+        close_following_tabs_action->setText(localize(is_horizontal ? "Close Tabs to the R&ight" : "Close Tabs B&elow"));
 
         // A tab that hasn't loaded has no page to mute yet.
         mute_tab_action->setEnabled(is_loaded());
-        mute_tab_action->setText(is_loaded() && view().page_mute_state() == Web::HTML::MuteState::Muted ? "Un&mute Tab" : "&Mute Tab");
+        mute_tab_action->setText(localize(is_loaded() && view().page_mute_state() == Web::HTML::MuteState::Muted ? "Un&mute Tab" : "&Mute Tab"));
         move_to_new_window_action->setEnabled(m_window->tab_count() > 1);
     });
 }

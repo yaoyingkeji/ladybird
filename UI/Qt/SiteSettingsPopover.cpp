@@ -9,6 +9,7 @@
 #include <UI/Qt/SiteSettingsPopover.h>
 #include <UI/Qt/StringUtils.h>
 #include <UI/Qt/Theme.h>
+#include <UI/Qt/Translation.h>
 
 #include <QFrame>
 #include <QHBoxLayout>
@@ -72,11 +73,11 @@ static QString autoplay_policy_name(Web::HTML::AutoplayPolicy policy)
 {
     switch (policy) {
     case Web::HTML::AutoplayPolicy::AllowAudioAndVideo:
-        return QStringLiteral("Allow");
+        return localize("Allow");
     case Web::HTML::AutoplayPolicy::BlockAudio:
-        return QStringLiteral("Block audio");
+        return localize("Block audio");
     case Web::HTML::AutoplayPolicy::BlockAudioAndVideo:
-        return QStringLiteral("Block");
+        return localize("Block");
     }
     VERIFY_NOT_REACHED();
 }
@@ -111,14 +112,14 @@ static ChromeIcon permission_icon(Web::Permissions::PermissionName name)
 static QString permission_decision_name(Optional<WebView::PermissionDecision> decision)
 {
     if (!decision.has_value())
-        return QStringLiteral("Ask");
+        return localize("Ask");
     switch (*decision) {
     case WebView::PermissionDecision::Allow:
-        return QStringLiteral("Allow");
+        return localize("Allow");
     case WebView::PermissionDecision::AllowOnce:
-        return QStringLiteral("Allow this time");
+        return localize("Allow this time");
     case WebView::PermissionDecision::Block:
-        return QStringLiteral("Block");
+        return localize("Block");
     }
     VERIFY_NOT_REACHED();
 }
@@ -140,7 +141,7 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
     , WebView::SettingsObserver(settings)
     , m_settings(settings)
 {
-    setAccessibleName("Site settings");
+    setAccessibleName(localize("Site settings"));
     card().setObjectName("LadybirdSiteSettingsPopover");
     card().setFixedWidth(POPOVER_WIDTH);
 
@@ -190,7 +191,7 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
     autoplay_row->setSpacing(10);
     m_autoplay_icon = create_icon(*m_site_page);
     autoplay_row->addWidget(m_autoplay_icon);
-    auto* autoplay_label = new QLabel("Autoplay", m_site_page);
+    auto* autoplay_label = new QLabel(localize("Autoplay"), m_site_page);
     autoplay_label->setFixedHeight(ROW_HEIGHT);
     autoplay_row->addWidget(autoplay_label, 1);
     m_autoplay_button = create_value_button(*m_site_page);
@@ -206,7 +207,7 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
             action->setChecked(site_policy == policy);
         }
 
-        auto* use_default = menu.addAction(qformatted("Default ({})", autoplay_policy_name(autoplay.policy)));
+        auto* use_default = menu.addAction(localize("Default (%1)").arg(autoplay_policy_name(autoplay.policy)));
         use_default->setCheckable(true);
         use_default->setChecked(!site_policy.has_value());
 
@@ -229,11 +230,11 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
     force_dark_row->setSpacing(10);
     m_force_dark_icon = create_icon(*m_site_page);
     force_dark_row->addWidget(m_force_dark_icon);
-    auto* force_dark_label = new QLabel("Force dark mode", m_site_page);
+    auto* force_dark_label = new QLabel(localize("Force dark mode"), m_site_page);
     force_dark_label->setFixedHeight(ROW_HEIGHT);
     force_dark_row->addWidget(force_dark_label, 1);
     m_force_dark_switch = new PopoverSwitch(m_site_page);
-    m_force_dark_switch->setAccessibleName("Force dark mode on this site");
+    m_force_dark_switch->setAccessibleName(localize("Force dark mode on this site"));
     QObject::connect(m_force_dark_switch, &QCheckBox::toggled, this, [this](bool enabled) {
         if (!m_is_private && !m_host.is_empty())
             m_settings.set_force_dark_for_host(m_host, enabled);
@@ -247,11 +248,11 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
     blocking_row->setSpacing(10);
     m_content_blocking_icon = create_icon(*m_site_page);
     blocking_row->addWidget(m_content_blocking_icon);
-    auto* blocking_label = new QLabel("Content blocking", m_site_page);
+    auto* blocking_label = new QLabel(localize("Content blocking"), m_site_page);
     blocking_label->setFixedHeight(ROW_HEIGHT);
     blocking_row->addWidget(blocking_label, 1);
     m_content_blocking_switch = new PopoverSwitch(m_site_page);
-    m_content_blocking_switch->setAccessibleName("Content blocking on this site");
+    m_content_blocking_switch->setAccessibleName(localize("Content blocking on this site"));
     QObject::connect(m_content_blocking_switch, &QCheckBox::toggled, this, [this](bool enabled) {
         if (on_content_blocking_toggle)
             on_content_blocking_toggle(enabled);
@@ -261,7 +262,7 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
 
     m_blocked_row = new QPushButton(m_site_page);
     m_blocked_row->setObjectName("LadybirdPopoverRow");
-    m_blocked_row->setAccessibleName("Blocked on this page");
+    m_blocked_row->setAccessibleName(localize("Blocked on this page"));
     m_blocked_row->setFixedHeight(ROW_HEIGHT);
     m_blocked_row->setAttribute(Qt::WA_LayoutUsesWidgetRect);
     auto* blocked_row_layout = new QHBoxLayout(m_blocked_row);
@@ -269,7 +270,7 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
     blocked_row_layout->setSpacing(10);
     // NB: A box layout puts no spacing after a spacer, so this spacer covers the icon and its spacing in the rows above.
     blocked_row_layout->addSpacing(26);
-    auto* blocked_label = new QLabel("Blocked on this page", m_blocked_row);
+    auto* blocked_label = new QLabel(localize("Blocked on this page"), m_blocked_row);
     blocked_label->setAttribute(Qt::WA_TransparentForMouseEvents);
     blocked_row_layout->addWidget(blocked_label, 1);
     m_blocked_count = new QLabel(m_blocked_row);
@@ -288,7 +289,7 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
     auto* links = new QHBoxLayout;
     links->setContentsMargins(4, 0, 4, 0);
     // What can be set for the site is reset to the defaults.
-    m_reset_permissions_link = create_link(*m_site_page, "Reset permissions");
+    m_reset_permissions_link = create_link(*m_site_page, localize("Reset permissions"));
     QObject::connect(m_reset_permissions_link, &QPushButton::clicked, this, [this] {
         m_settings.remove_autoplay_site_filter(m_origin);
         if (!m_is_private)
@@ -299,7 +300,7 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
     });
     links->addWidget(m_reset_permissions_link);
     links->addStretch(1);
-    auto* site_settings_link = create_link(*m_site_page, "All site settings");
+    auto* site_settings_link = create_link(*m_site_page, localize("All site settings"));
     QObject::connect(site_settings_link, &QPushButton::clicked, this, [this] {
         close();
         if (on_open_all_site_settings)
@@ -320,12 +321,12 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
     blocked_heading->setSpacing(4);
     m_back_button = new QToolButton(m_blocked_page);
     m_back_button->setObjectName("LadybirdPopoverIconButton");
-    m_back_button->setAccessibleName("Back to site settings");
+    m_back_button->setAccessibleName(localize("Back to site settings"));
     m_back_button->setFixedSize(28, 28);
     m_back_button->setIconSize({ 14, 14 });
     QObject::connect(m_back_button, &QToolButton::clicked, this, [this] { show_blocked_resources(false); });
     blocked_heading->addWidget(m_back_button);
-    auto* blocked_title = new QLabel("Blocked on this page", m_blocked_page);
+    auto* blocked_title = new QLabel(localize("Blocked on this page"), m_blocked_page);
     blocked_title->setObjectName("LadybirdSiteSettingsHost");
     blocked_title->setFixedHeight(32);
     blocked_heading->addWidget(blocked_title, 1);
@@ -354,7 +355,7 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
     });
     blocked_links->addWidget(report_link);
     blocked_links->addStretch(1);
-    auto* filter_lists_link = create_link(*m_blocked_page, "Filter lists");
+    auto* filter_lists_link = create_link(*m_blocked_page, localize("Filter lists"));
     QObject::connect(filter_lists_link, &QPushButton::clicked, this, [this] {
         close();
         if (on_open_filter_lists)
@@ -398,7 +399,7 @@ SiteSettingsPopover::SiteSettingsPopover(QWidget* parent, WebView::Settings& set
     auto* no_site_links = new QHBoxLayout;
     no_site_links->setContentsMargins(4, 0, 4, 0);
     no_site_links->addStretch(1);
-    auto* no_site_settings_link = create_link(*m_no_site_page, "All site settings");
+    auto* no_site_settings_link = create_link(*m_no_site_page, localize("All site settings"));
     QObject::connect(no_site_settings_link, &QPushButton::clicked, this, [this] {
         close();
         if (on_open_all_site_settings)
@@ -420,7 +421,7 @@ void SiteSettingsPopover::set_site(Site site)
     content_settings_changed();
     m_host_label->setText(qstring_from_ak_string(site.origin.host().serialize()));
     // A secure connection is the norm, so only an insecure one is mentioned.
-    m_security_label->setText("Connection is not secure");
+    m_security_label->setText(localize("Connection is not secure"));
     m_security_label->setVisible(site.origin.scheme() != "https"sv);
 
     m_favicon->setPixmap(heading_favicon_pixmap(site.favicon, devicePixelRatioF()));
@@ -491,12 +492,12 @@ void SiteSettingsPopover::set_permissions(Vector<WebView::SitePermissionRow> con
                 actions.append(action);
                 choices.append(choice);
             };
-            add_choice("Allow", WebView::PermissionDecision::Allow);
+            add_choice(localize("Allow"), WebView::PermissionDecision::Allow);
             // A one-time grant can be kept while it lasts, but not given from here.
             if (one_time_grant_is_live)
-                add_choice("Allow this time", WebView::PermissionDecision::AllowOnce);
-            add_choice("Ask", {});
-            add_choice("Block", WebView::PermissionDecision::Block);
+                add_choice(localize("Allow this time"), WebView::PermissionDecision::AllowOnce);
+            add_choice(localize("Ask"), {});
+            add_choice(localize("Block"), WebView::PermissionDecision::Block);
             auto* chosen = menu.exec(button->mapToGlobal(QPoint(0, button->height())));
             if (auto index = actions.find_first_index(chosen); index.has_value() && on_permission_change)
                 on_permission_change(name, choices[*index]);
@@ -531,7 +532,7 @@ void SiteSettingsPopover::set_content_blocking(WebView::ContentBlockingSnapshot 
         delete item;
     }
     if (blocking.blocked_resources.is_empty()) {
-        auto* empty = new QLabel("Nothing has been blocked on this page.", m_blocked_page);
+        auto* empty = new QLabel(localize("Nothing has been blocked on this page."), m_blocked_page);
         empty->setObjectName("LadybirdSiteSettingsDetail");
         empty->setFixedHeight(BLOCKED_RESOURCE_ROW_HEIGHT);
         m_blocked_list->addWidget(empty);
