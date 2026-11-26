@@ -1117,9 +1117,6 @@ ErrorOr<int> Application::execute() { return hub().execute(); }
 Application::Application()
 {
     s_the = this;
-
-    // Translate Qt's tr() strings with the same table that the menus and dialogs use.
-    installTranslator(new DictionaryTranslator(this));
 }
 
 Application::~Application()
@@ -1371,6 +1368,10 @@ void Application::will_create_event_loop(Main::Arguments& arguments)
     qputenv("NO_AT_BRIDGE", "1");
 #endif
     m_application = make<LadybirdQApplication>(arguments);
+
+    // Translate Qt's tr() strings with the same table that the menus and dialogs use. The QApplication owns the
+    // translator, so it lives exactly as long as the widgets that ask it for text.
+    QCoreApplication::installTranslator(new DictionaryTranslator(m_application.ptr()));
 #if defined(AK_OS_MACOS)
     // NB: Qt owns its converters, and deletes them along with the QApplication.
     new PNGMimeConverter;
