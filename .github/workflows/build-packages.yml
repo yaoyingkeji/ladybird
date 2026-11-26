@@ -210,7 +210,6 @@ jobs:
         with:
           name: deb
           path: Build/packages/*.deb
-          archive: false
           if-no-files-found: error
 
       - name: Upload the checksums and release notes
@@ -220,7 +219,6 @@ jobs:
           path: |
             Build/packages/SHA256SUMS.txt
             Build/packages/notes.md
-          archive: false
           if-no-files-found: error
 
       - name: Save ccache
