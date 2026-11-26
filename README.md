@@ -40,6 +40,8 @@ Build environment: Ubuntu 24.04 with Clang and the `Distribution` preset (LTO, Q
 
 - 每日 UTC 01:30 检测上游 [LadybirdBrowser/ladybird](https://github.com/LadybirdBrowser/ladybird) 的分支、标签与发布是否有更新 / checks upstream branches, tags and releases daily at 01:30 UTC
 - 有更新时才同步：所有分支、标签与发布（含发布说明和附件）/ when changes are found, all branches, tags and releases (including notes and assets) are mirrored
+- 标签直接使用上游原始标签对象，打标签者与时间保持不变 / tags are the original upstream tag objects, so the tagger and date are preserved
+- 同步的发布保留上游名称、说明、预发布标记与附件，并在说明顶部记录上游作者和发布时间（GitHub 不允许直接设置这两项）/ mirrored releases keep the upstream name, notes, prerelease flag and assets, and record the upstream author and publish time at the top of the notes (GitHub does not allow setting these two fields directly)
 - 上游 `master` 前进时自动变基 `auto-build`，冲突时改用合并提交 / `auto-build` is rebased onto upstream `master` when it advances, falling back to a merge commit on conflicts
 - 上游没有更新时不产生任何提交或推送 / nothing is committed or pushed when upstream has no changes
 - 同步后的提交者为本仓库账号，不使用机器人身份 / commits created by the sync use this repository's account, not a bot identity

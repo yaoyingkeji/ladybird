@@ -46,6 +46,7 @@ jobs:
           git fetch --prune --force origin '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'
 
           work=$(mktemp -d)
+          GITHUB_SERVER_URL=${GITHUB_SERVER_URL:-https://github.com}
           changed=0
           details=()
 
@@ -83,20 +84,30 @@ jobs:
             fi
           done < "$work/upstream-tags"
 
-          # 发布（releases）：缺失，或名称、说明、预发布标记、附件有变化
-          signature() {
-            gh api "$1" --jq '[.name, (.draft|tostring), (.prerelease|tostring), (.body // ""), ([.assets[]? | .name + ":" + (.size|tostring)] | join(","))] | @json'
-          }
+          # 发布（releases）：缺失，或名称、说明、预发布标记、附件有变化。
+          # GitHub 不允许设置发布作者与发布时间，因此这两项会写进发布说明顶部。
+          release_sig() { jq -c '[.name, (.draft|tostring), (.prerelease|tostring), (.body // "")]'; }
+          asset_sig() { jq -c '[.assets[]? | .name + ":" + (.size|tostring)]'; }
 
           while read -r tag; do
             [ -z "$tag" ] && continue
-            upstream_sig=$(signature "repos/${UPSTREAM_REPO}/releases/tags/${tag}")
-            if ! fork_sig=$(signature "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" 2>/dev/null); then
+
+            gh api "repos/${UPSTREAM_REPO}/releases/tags/${tag}" > "$work/upstream.json"
+            jq -f .github/scripts/mirror-release.jq \
+              --arg repo "$UPSTREAM_REPO" --arg server "$GITHUB_SERVER_URL" \
+              "$work/upstream.json" > "$work/expected.json"
+
+            expected="$(release_sig < "$work/expected.json")$(asset_sig < "$work/upstream.json")"
+
+            if ! gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" > "$work/fork.json" 2>/dev/null; then
               details+=("新增发布 \`$tag\`")
               changed=1
-            elif [ "$upstream_sig" != "$fork_sig" ]; then
-              details+=("发布更新 \`$tag\`")
-              changed=1
+            else
+              actual="$(release_sig < "$work/fork.json")$(asset_sig < "$work/fork.json")"
+              if [ "$expected" != "$actual" ]; then
+                details+=("发布更新 \`$tag\`")
+                changed=1
+              fi
             fi
           done < <(gh api --paginate "repos/${UPSTREAM_REPO}/releases?per_page=100" --jq '.[].tag_name')
 
@@ -165,8 +176,9 @@ jobs:
             [ -z "$tag" ] && continue
 
             gh api "repos/${UPSTREAM_REPO}/releases/tags/${tag}" > "$work/upstream.json"
-            # make_latest 设为 false：本仓库的“最新发布”保持为自动构建，不被上游发布顶掉
-            jq '{tag_name: .tag_name, name: .name, body: (.body // ""), draft: .draft, prerelease: .prerelease, make_latest: "false"}' \
+            # 说明顶部附加上游作者与发布时间；make_latest 设为 false，本仓库的“最新发布”保持为自动构建
+            jq -f .github/scripts/mirror-release.jq \
+              --arg repo "$UPSTREAM_REPO" --arg server "$GITHUB_SERVER_URL" \
               "$work/upstream.json" > "$work/payload.json"
 
             if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" > "$work/fork.json" 2>/dev/null; then
