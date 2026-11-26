@@ -14,6 +14,7 @@
 #include <QString>
 #include <QtGlobal>
 
+#include <cstring>
 #include <iterator>
 
 namespace Ladybird {
@@ -417,7 +418,7 @@ QString localize(AK::StringView text)
 
 QString localize(char const* text)
 {
-    return localize(AK::StringView { text });
+    return localize(AK::StringView { text, std::strlen(text) });
 }
 
 DictionaryTranslator::DictionaryTranslator(QObject* parent)
@@ -429,7 +430,7 @@ QString DictionaryTranslator::translate(char const*, char const* source_text, ch
 {
     if (!source_text)
         return {};
-    return localize(AK::StringView { source_text });
+    return localize(AK::StringView { source_text, std::strlen(source_text) });
 }
 
 bool DictionaryTranslator::isEmpty() const
