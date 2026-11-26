@@ -77,7 +77,7 @@ chmod +x ladybird-*.AppImage
 ## 与官方构建的差异 / Differences from official builds
 
 - 未做代码签名与构建证明 / no code signing or build attestation
-- 界面支持简体中文，随系统语言或 `LADYBIRD_LANGUAGE` 启用 / Simplified Chinese UI follows the system language or `LADYBIRD_LANGUAGE`
+- 界面支持简体中文，随系统语言或 \`LADYBIRD_LANGUAGE\` 启用（WebUI 另可用 \`?lang=zh-CN\` 强制中文）/ Simplified Chinese UI follows the system language or \`LADYBIRD_LANGUAGE\` (WebUI also accepts \`?lang=zh-CN\`)
 - 更新检查与 AppImage 自更新已关闭 / update checks and AppImage self-updates are disabled
 - 使用 Ubuntu 24.04 + Clang + \`Distribution\` preset（LTO、Qt 由 vcpkg 构建）/ built on Ubuntu 24.04 with Clang, the \`Distribution\` preset, LTO, and Qt from vcpkg
 - 需要 glibc ≥ 2.39 / requires glibc ≥ 2.39

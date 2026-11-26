@@ -185,6 +185,12 @@ jobs:
       - name: Write checksums
         working-directory: Build/packages
         run: |
+          # GitHub 会把发布文件名里的 ~ 替换成 .，这里先统一改名，保证校验和与下载到的文件一致。
+          for file in ./*.AppImage ./*.deb; do
+            case "$file" in
+              *'~'*) mv "$file" "${file//\~/.}" ;;
+            esac
+          done
           sha256sum ./*.AppImage ./*.deb > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
