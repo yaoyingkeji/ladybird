@@ -23,6 +23,9 @@ jobs:
         with:
           ref: auto-build
           fetch-depth: 0
+          # 上游分支可能改动 .github/workflows/ 下的文件，GITHUB_TOKEN 没有 workflows 权限，
+          # 因此使用带 workflow 权限的令牌（仓库 secret：SYNC_TOKEN）。
+          token: ${{ secrets.SYNC_TOKEN || github.token }}
 
       - name: Mirror upstream branches and tags
         run: |
