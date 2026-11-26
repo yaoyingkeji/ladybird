@@ -9,17 +9,10 @@ if (CPACK_GENERATOR MATCHES "^(DEB|RPM)$")
     set(CPACK_PRE_BUILD_SCRIPTS "${CMAKE_CURRENT_LIST_DIR}/cpack_package_format.cmake")
 endif()
 
-# A Linux package targets the ABI of the distribution that built it, so its version names that distribution version:
-# Debian packages like Ubuntu's backports do, RPM packages with the dist tag of rpmbuild. Builds for several versions
-# of a distribution can then share a repository, and upgrading the distribution also moves Ladybird to the build for it.
+# 本 fork 的包面向多个发行版（Ubuntu 22.04+ / Debian 12+ / Deepin 25+），
+# 因此版本号与文件名里不带发行版标识，统一使用 release 号 1。
 if (CPACK_GENERATOR STREQUAL "DEB")
-    file(STRINGS /etc/os-release os_release REGEX "^(ID|VERSION_ID)=")
-    foreach (line IN LISTS os_release)
-        if (line MATCHES "^(ID|VERSION_ID)=\"?([^\"]*)\"?$")
-            set(os_release_${CMAKE_MATCH_1} "${CMAKE_MATCH_2}")
-        endif()
-    endforeach()
-    set(CPACK_DEBIAN_PACKAGE_RELEASE "1~${os_release_ID}${os_release_VERSION_ID}")
+    set(CPACK_DEBIAN_PACKAGE_RELEASE "1")
     set(CPACK_DEBIAN_DEBUGSYMBOLS_PACKAGE_DEPENDS
         "ladybird (= ${CPACK_PACKAGE_VERSION}-${CPACK_DEBIAN_PACKAGE_RELEASE})")
 endif()
