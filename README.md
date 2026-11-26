@@ -36,6 +36,14 @@ chmod +x ladybird-*.AppImage && ./ladybird-*.AppImage
 构建环境：Ubuntu 24.04、Clang、`Distribution` preset（LTO，Qt 由 vcpkg 构建），运行要求 glibc ≥ 2.39。
 Build environment: Ubuntu 24.04 with Clang and the `Distribution` preset (LTO, Qt from vcpkg); requires glibc ≥ 2.39.
 
+### 上游同步 / Upstream sync
+
+- 每日 UTC 01:30 检测上游 [LadybirdBrowser/ladybird](https://github.com/LadybirdBrowser/ladybird) 的分支、标签与发布是否有更新 / checks upstream branches, tags and releases daily at 01:30 UTC
+- 有更新时才同步：所有分支、标签与发布（含发布说明和附件）/ when changes are found, all branches, tags and releases (including notes and assets) are mirrored
+- 上游 `master` 前进时自动变基 `auto-build`，冲突时改用合并提交 / `auto-build` is rebased onto upstream `master` when it advances, falling back to a merge commit on conflicts
+- 上游没有更新时不产生任何提交或推送 / nothing is committed or pushed when upstream has no changes
+- 同步后的提交者为本仓库账号，不使用机器人身份 / commits created by the sync use this repository's account, not a bot identity
+
 ### 中文界面 / Chinese interface
 
 `auto-build` 分支加入了简体中文界面：菜单、地址栏、查找栏、下载与书签、权限提示、设置页、历史页、证书警告、崩溃报告等均已翻译；未收录的文本自动回退英文。

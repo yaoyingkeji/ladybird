@@ -2,6 +2,7 @@ name: Sync Upstream
 
 on:
   schedule:
+    # 每天 01:30 UTC 检测上游是否有新分支、标签或发布
     - cron: '30 1 * * *'
   workflow_dispatch:
 
@@ -12,11 +13,14 @@ concurrency:
   group: sync-upstream
   cancel-in-progress: false
 
+env:
+  UPSTREAM_REPO: LadybirdBrowser/ladybird
+
 jobs:
   sync:
-    name: Mirror upstream and rebase auto-build
+    name: 检测并同步上游
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Check out auto-build
         uses: actions/checkout@v7.0.1
@@ -27,49 +31,181 @@ jobs:
           # 因此使用带 workflow 权限的令牌（仓库 secret：SYNC_TOKEN）。
           token: ${{ secrets.SYNC_TOKEN || github.token }}
 
-      - name: Mirror upstream branches and tags
+      - name: Detect upstream changes
+        id: detect
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN || github.token }}
         run: |
           set -euo pipefail
           git config user.name 'yaoyingkeji'
           git config user.email 'yaoyingkeji@yaoying.vip'
-          git remote add upstream https://github.com/LadybirdBrowser/ladybird.git 2>/dev/null || true
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" 2>/dev/null || true
 
-          # 拉取上游全部分支与标签
+          # 拉取上游全部分支与标签，以及本仓库当前状态用于比较
+          git fetch --prune --force --tags upstream '+refs/heads/*:refs/remotes/upstream/*'
+          git fetch --prune --force origin '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'
+
+          work=$(mktemp -d)
+          changed=0
+          details=()
+
+          # 分支：新增或更新
+          while read -r ref; do
+            [ "$ref" = "HEAD" ] && continue
+            if ! git show-ref --verify --quiet "refs/remotes/origin/$ref"; then
+              details+=("新增分支 \`$ref\`")
+              changed=1
+            elif [ "$(git rev-parse "refs/remotes/origin/$ref")" != "$(git rev-parse "refs/remotes/upstream/$ref")" ]; then
+              details+=("分支更新 \`$ref\`")
+              changed=1
+            fi
+          done < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/upstream)
+
+          # 分支：上游已删除（auto-build 是本仓库自己的分支，保留）
+          while read -r ref; do
+            [ "$ref" = "HEAD" ] && continue
+            [ "$ref" = "auto-build" ] && continue
+            if ! git show-ref --verify --quiet "refs/remotes/upstream/$ref"; then
+              details+=("分支已删除 \`$ref\`")
+              changed=1
+            fi
+          done < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin)
+
+          # 标签：比较本仓库远端与上游远端，缺失或指向不同提交都算更新
+          git ls-remote --tags --refs upstream | awk '{print $2" "$1}' | sed 's#refs/tags/##' | sort > "$work/upstream-tags"
+          git ls-remote --tags --refs origin | awk '{print $2" "$1}' | sed 's#refs/tags/##' | sort > "$work/fork-tags"
+          while read -r name sha; do
+            [ -z "$name" ] && continue
+            fork_sha=$(awk -v n="$name" '$1 == n { print $2 }' "$work/fork-tags")
+            if [ "$fork_sha" != "$sha" ]; then
+              details+=("标签更新 \`$name\`")
+              changed=1
+            fi
+          done < "$work/upstream-tags"
+
+          # 发布（releases）：缺失，或名称、说明、预发布标记、附件有变化
+          signature() {
+            gh api "$1" --jq '[.name, (.draft|tostring), (.prerelease|tostring), (.body // ""), ([.assets[]? | .name + ":" + (.size|tostring)] | join(","))] | @json'
+          }
+
+          while read -r tag; do
+            [ -z "$tag" ] && continue
+            upstream_sig=$(signature "repos/${UPSTREAM_REPO}/releases/tags/${tag}")
+            if ! fork_sig=$(signature "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" 2>/dev/null); then
+              details+=("新增发布 \`$tag\`")
+              changed=1
+            elif [ "$upstream_sig" != "$fork_sig" ]; then
+              details+=("发布更新 \`$tag\`")
+              changed=1
+            fi
+          done < <(gh api --paginate "repos/${UPSTREAM_REPO}/releases?per_page=100" --jq '.[].tag_name')
+
+          # 上游 master 是否前进（决定是否需要 rebase auto-build）
+          master_changed=false
+          if ! git merge-base --is-ancestor refs/remotes/upstream/master HEAD; then
+            master_changed=true
+          fi
+
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "master_changed=$master_changed" >> "$GITHUB_OUTPUT"
+
+          if [ "$changed" = "0" ]; then
+            echo "上游没有更新，跳过同步。"
+            echo "### 上游没有更新 / No upstream changes" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "检测到上游更新："
+            printf '%s\n' "${details[@]}"
+            {
+              echo "### 检测到上游更新 / Upstream changes detected"
+              echo
+              printf -- '- %s\n' "${details[@]}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Mirror upstream branches and tags
+        if: steps.detect.outputs.changed == '1'
+        run: |
+          set -euo pipefail
+          git config user.name 'yaoyingkeji'
+          git config user.email 'yaoyingkeji@yaoying.vip'
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" 2>/dev/null || true
           git fetch --prune --force upstream '+refs/heads/*:refs/remotes/upstream/*' '+refs/tags/*:refs/tags/*'
 
           # 把上游每个分支同步到本仓库（auto-build 是本仓库自己的分支，跳过）
-          for ref in $(git for-each-ref --format='%(refname:strip=3)' refs/remotes/upstream); do
-            if [ "$ref" = "HEAD" ] || [ "$ref" = "auto-build" ]; then
-              continue
-            fi
-            echo "syncing branch $ref"
+          while read -r ref; do
+            [ "$ref" = "HEAD" ] && continue
+            [ "$ref" = "auto-build" ] && continue
+            echo "同步分支 $ref"
             git push origin "refs/remotes/upstream/$ref:refs/heads/$ref" --force
-          done
+          done < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/upstream)
 
           # 删除上游已不存在的分支（保留 auto-build）
           git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
-          for ref in $(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin); do
-            if [ "$ref" = "HEAD" ] || [ "$ref" = "auto-build" ]; then
-              continue
-            fi
+          while read -r ref; do
+            [ "$ref" = "HEAD" ] && continue
+            [ "$ref" = "auto-build" ] && continue
             if ! git show-ref --verify --quiet "refs/remotes/upstream/$ref"; then
-              echo "deleting stale branch $ref"
-              git push origin --delete "$ref"
+              echo "删除过期分支 $ref"
+              git push origin --delete "$ref" || true
             fi
-          done
+          done < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin)
 
           # 同步标签
           git push origin --tags --force
 
+      - name: Mirror upstream releases
+        if: steps.detect.outputs.changed == '1'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          work=$(mktemp -d)
+
+          while read -r tag; do
+            [ -z "$tag" ] && continue
+
+            gh api "repos/${UPSTREAM_REPO}/releases/tags/${tag}" > "$work/upstream.json"
+            # make_latest 设为 false：本仓库的“最新发布”保持为自动构建，不被上游发布顶掉
+            jq '{tag_name: .tag_name, name: .name, body: (.body // ""), draft: .draft, prerelease: .prerelease, make_latest: "false"}' \
+              "$work/upstream.json" > "$work/payload.json"
+
+            if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" > "$work/fork.json" 2>/dev/null; then
+              fork_id=$(jq -r .id "$work/fork.json")
+              echo "更新发布 $tag"
+              gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/${fork_id}" --input "$work/payload.json" > /dev/null
+            else
+              echo "创建发布 $tag"
+              gh api -X POST "repos/${GITHUB_REPOSITORY}/releases" --input "$work/payload.json" > /dev/null
+            fi
+
+            # 同步发布附件（上游目前没有附件，保留通用逻辑）
+            while read -r asset; do
+              [ -z "$asset" ] && continue
+              if ! gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+                --jq ".assets[]? | select(.name == \"${asset}\") | .name" | grep -q .; then
+                echo "同步附件 $tag/$asset"
+                mkdir -p "$work/assets"
+                gh release download "$tag" --repo "$UPSTREAM_REPO" --pattern "$asset" --dir "$work/assets"
+                gh release upload "$tag" "$work/assets/$asset" --repo "$GITHUB_REPOSITORY" --clobber
+              fi
+            done < <(jq -r '.assets[]?.name' "$work/upstream.json")
+          done < <(gh api --paginate "repos/${UPSTREAM_REPO}/releases?per_page=100" --jq '.[].tag_name')
+
       - name: Rebase auto-build onto upstream master
+        if: steps.detect.outputs.master_changed == 'true'
         run: |
           set -euo pipefail
           git config user.name 'yaoyingkeji'
           git config user.email 'yaoyingkeji@yaoying.vip'
           git fetch upstream master
 
+          if git merge-base --is-ancestor upstream/master HEAD; then
+            echo "auto-build 已包含上游 master，无需变基。"
+            exit 0
+          fi
+
           if ! git rebase upstream/master; then
-            echo "rebase failed, falling back to a merge commit"
+            echo "变基冲突，改用合并提交。"
             git rebase --abort || true
             git merge --no-edit upstream/master
           fi
