@@ -30,8 +30,8 @@ jobs:
       - name: Mirror upstream branches and tags
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name 'yaoyingkeji'
+          git config user.email 'yaoyingkeji@yaoying.vip'
           git remote add upstream https://github.com/LadybirdBrowser/ladybird.git 2>/dev/null || true
 
           # 拉取上游全部分支与标签
@@ -64,8 +64,8 @@ jobs:
       - name: Rebase auto-build onto upstream master
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name 'yaoyingkeji'
+          git config user.email 'yaoyingkeji@yaoying.vip'
           git fetch upstream master
 
           if ! git rebase upstream/master; then
