@@ -14,9 +14,9 @@ concurrency:
 
 jobs:
   sync:
-    name: Rebase auto-build onto upstream master
+    name: Mirror upstream and rebase auto-build
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Check out auto-build
         uses: actions/checkout@v7.0.1
@@ -24,13 +24,51 @@ jobs:
           ref: auto-build
           fetch-depth: 0
 
-      - name: Rebase onto upstream master
+      - name: Mirror upstream branches and tags
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git remote add upstream https://github.com/LadybirdBrowser/ladybird.git
-          git fetch --no-tags upstream master
-          git fetch --tags upstream
-          git rebase upstream/master
+          git remote add upstream https://github.com/LadybirdBrowser/ladybird.git 2>/dev/null || true
+
+          # 拉取上游全部分支与标签
+          git fetch --prune --force upstream '+refs/heads/*:refs/remotes/upstream/*' '+refs/tags/*:refs/tags/*'
+
+          # 把上游每个分支同步到本仓库（auto-build 是本仓库自己的分支，跳过）
+          for ref in $(git for-each-ref --format='%(refname:strip=3)' refs/remotes/upstream); do
+            if [ "$ref" = "HEAD" ] || [ "$ref" = "auto-build" ]; then
+              continue
+            fi
+            echo "syncing branch $ref"
+            git push origin "refs/remotes/upstream/$ref:refs/heads/$ref" --force
+          done
+
+          # 删除上游已不存在的分支（保留 auto-build）
+          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
+          for ref in $(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin); do
+            if [ "$ref" = "HEAD" ] || [ "$ref" = "auto-build" ]; then
+              continue
+            fi
+            if ! git show-ref --verify --quiet "refs/remotes/upstream/$ref"; then
+              echo "deleting stale branch $ref"
+              git push origin --delete "$ref"
+            fi
+          done
+
+          # 同步标签
+          git push origin --tags --force
+
+      - name: Rebase auto-build onto upstream master
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch upstream master
+
+          if ! git rebase upstream/master; then
+            echo "rebase failed, falling back to a merge commit"
+            git rebase --abort || true
+            git merge --no-edit upstream/master
+          fi
+
           git push origin HEAD:auto-build --force-with-lease
