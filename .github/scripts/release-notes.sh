@@ -59,7 +59,7 @@ ${rows}
 
 ## 安装 / Installation
 
-Debian 包（Ubuntu 24.04 / Debian 13 及更新版本，x86_64）/ Debian package (Ubuntu 24.04 / Debian 13+, x86_64):
+Debian 包（Ubuntu 22.04+ / Debian 12+ / Deepin 25+，x86_64）/ Debian package (Ubuntu 22.04+ / Debian 12+ / Deepin 25+, x86_64):
 
 \`\`\`bash
 sudo apt install ./ladybird_*.deb
@@ -79,8 +79,8 @@ chmod +x ladybird-*.AppImage
 - 未做代码签名与构建证明 / no code signing or build attestation
 - 界面支持简体中文，随系统语言或 \`LADYBIRD_LANGUAGE\` 启用（WebUI 另可用 \`?lang=zh-CN\` 强制中文）/ Simplified Chinese UI follows the system language or \`LADYBIRD_LANGUAGE\` (WebUI also accepts \`?lang=zh-CN\`)
 - 更新检查与 AppImage 自更新已关闭 / update checks and AppImage self-updates are disabled
-- 使用 Ubuntu 24.04 + Clang + \`Distribution\` preset（LTO、Qt 由 vcpkg 构建）/ built on Ubuntu 24.04 with Clang, the \`Distribution\` preset, LTO, and Qt from vcpkg
-- 需要 glibc ≥ 2.39 / requires glibc ≥ 2.39
+- 使用 Ubuntu 22.04 + Clang + \`Distribution\` preset（LTO、Qt 由 vcpkg 构建）/ built on Ubuntu 22.04 with Clang, the \`Distribution\` preset, LTO, and Qt from vcpkg
+- 需要 glibc ≥ 2.35 / requires glibc ≥ 2.35
 - 由 GitHub Actions 自动生成，未经过人工测试 / produced by GitHub Actions without manual testing
 
 ## 构建方式 / How it is built

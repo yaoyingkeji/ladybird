@@ -27,7 +27,7 @@ concurrency:
 jobs:
   build:
     name: Linux x86_64 packages
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 355
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -105,6 +105,15 @@ jobs:
           sudo ln -sf /usr/bin/clang-22 /usr/local/bin/clang
           sudo ln -sf /usr/bin/clang++-22 /usr/local/bin/clang++
 
+      - name: Add GCC 14 toolchain
+        run: |
+          # Ubuntu 22.04 自带 GCC 12 的 libstdc++，而上游要求 libstdc++-14-dev。
+          # 这里用 ubuntu-toolchain-r/test PPA 提供 GCC 14，其余依赖仍由上游脚本安装。
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends software-properties-common
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+
       - name: Install build dependencies
         run: |
           sudo --preserve-env=GITHUB_ENV,GITHUB_PATH,DEBIAN_FRONTEND \
@@ -123,17 +132,17 @@ jobs:
         uses: actions/cache@v5
         with:
           path: Build/caches/vcpkg-binary-cache
-          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          key: vcpkg-${{ runner.os }}-jammy-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
           restore-keys: |
-            vcpkg-${{ runner.os }}-
+            vcpkg-${{ runner.os }}-jammy-
 
       - name: Restore ccache
         uses: actions/cache@v5
         with:
           path: .ccache
-          key: ccache-${{ runner.os }}-${{ github.run_id }}
+          key: ccache-${{ runner.os }}-jammy-${{ github.run_id }}
           restore-keys: |
-            ccache-${{ runner.os }}-
+            ccache-${{ runner.os }}-jammy-
 
       - name: Install vcpkg dependencies
         env:
@@ -162,7 +171,7 @@ jobs:
         uses: actions/cache/save@v5
         with:
           path: Build/caches/vcpkg-binary-cache
-          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          key: vcpkg-${{ runner.os }}-jammy-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
 
       - name: Build
         run: cmake --build Build
@@ -232,7 +241,7 @@ jobs:
         uses: actions/cache/save@v5
         with:
           path: .ccache
-          key: ccache-${{ runner.os }}-${{ github.run_id }}
+          key: ccache-${{ runner.os }}-jammy-${{ github.run_id }}
 
   release:
     name: Publish release

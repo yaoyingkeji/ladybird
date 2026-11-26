@@ -20,21 +20,21 @@
 ### 自动构建 / Automated builds
 
 - 每日 UTC 02:00 定时构建，也可手动触发 / built daily at 02:00 UTC, and on demand
-- 产物 / artifacts: `.deb`（Ubuntu 24.04, x86_64，含 `ladybird-dbgsym`）与 `.AppImage`（x86_64）
+- 产物 / artifacts: `.deb`（Ubuntu 22.04 构建，x86_64，含 `ladybird-dbgsym`）与 `.AppImage`（x86_64）
 - 版本号 / version: `<上游标签 upstream tag>.auto.<YYYYMMDD>`
 - 下载 / download: [Releases](https://github.com/yaoyingkeji/ladybird/releases/latest)
 - 构建日志 / build logs: [Actions](https://github.com/yaoyingkeji/ladybird/actions/workflows/build-packages.yml)
 
 ```bash
-# Debian / Ubuntu 24.04+ (x86_64)
+# Ubuntu 22.04+ / Debian 12+ / Deepin 25+ (x86_64)
 sudo apt install ./ladybird_*.deb
 
 # AppImage (x86_64)
 chmod +x ladybird-*.AppImage && ./ladybird-*.AppImage
 ```
 
-构建环境：Ubuntu 24.04、Clang、`Distribution` preset（LTO，Qt 由 vcpkg 构建），运行要求 glibc ≥ 2.39。
-Build environment: Ubuntu 24.04 with Clang and the `Distribution` preset (LTO, Qt from vcpkg); requires glibc ≥ 2.39.
+构建环境：Ubuntu 22.04、Clang、`Distribution` preset（LTO，Qt 由 vcpkg 构建），运行要求 glibc ≥ 2.35（Ubuntu 22.04+、Debian 12+、Deepin 25+）。
+Build environment: Ubuntu 22.04 with Clang and the `Distribution` preset (LTO, Qt from vcpkg); requires glibc ≥ 2.35 (Ubuntu 22.04+, Debian 12+, Deepin 25+).
 
 ### 上游同步 / Upstream sync
 
