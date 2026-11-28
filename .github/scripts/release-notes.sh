@@ -21,7 +21,8 @@ commit_short=${COMMIT:0:12}
 built_at=$(date -u '+%Y-%m-%d %H:%M')
 
 case "$TRIGGER" in
-    schedule) trigger='每日定时 / scheduled' ;;
+    push) trigger='代码更新 / push' ;;
+    schedule) trigger='定时 / scheduled' ;;
     workflow_dispatch) trigger='手动触发 / manual' ;;
     *) trigger="$TRIGGER" ;;
 esac
@@ -43,7 +44,7 @@ cat <<EOF
 | --- | --- |
 | 分支 / Branch | \`auto-build\`（本 fork 的默认分支 / default branch of this fork） |
 | 版本 / Version | \`${VERSION}\` |
-| 标签 / Tag | \`${TAG}\`（滚动标签，始终指向最近一次成功的每日构建 / rolling tag, always points to the latest successful daily build） |
+| 标签 / Tag | \`${TAG}\`（滚动标签，始终指向最近一次成功的最新构建 / rolling tag, always points to the latest successful build） |
 | 提交 / Commit | [\`${commit_short}\`](${server}/${repo}/commit/${COMMIT}) |
 | 上游基线 / Upstream base | \`${UPSTREAM}\` |
 | 触发方式 / Trigger | ${trigger} |

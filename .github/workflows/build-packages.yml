@@ -1,10 +1,14 @@
 name: Build Packages
 
-run-name: "Build ${{ inputs.version || 'auto' }} from ${{ inputs.ref || github.ref_name }}"
+run-name: "Build latest from ${{ inputs.ref || github.ref_name }}"
 
 on:
-  schedule:
-    - cron: '0 2 * * *'
+  push:
+    branches:
+      - auto-build
+    # 纯文档改动不触发耗时的打包构建
+    paths-ignore:
+      - '**.md'
   workflow_dispatch:
     inputs:
       version:
@@ -300,7 +304,7 @@ jobs:
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             gh release create "$TAG" \
               --repo "$GITHUB_REPOSITORY" \
-              --title "Ladybird $VERSION · 每日自动构建 / daily auto build" \
+              --title "Ladybird $VERSION · 最新构建 / latest build" \
               --notes-file notes.md \
               --latest
             created=1
@@ -334,7 +338,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --clobber
           gh release edit "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Ladybird $VERSION · 每日自动构建 / daily auto build" \
+            --title "Ladybird $VERSION · 最新构建 / latest build" \
             --notes-file notes.md \
             --latest
 
@@ -356,7 +360,7 @@ jobs:
                   --repo "$GITHUB_REPOSITORY" --yes || true
               done
 
-          echo "每日构建发布已更新：$TAG -> $VERSION ($COMMIT)"
+          echo "最新构建发布已更新：$TAG -> $VERSION ($COMMIT)"
 
       - name: Restore the previous release on failure
         if: failure()
@@ -396,4 +400,4 @@ jobs:
                     --repo "$GITHUB_REPOSITORY" --yes || true
                 done
           fi
-          echo "已回滚本次改动，保留上一次成功的每日构建发布"
+          echo "已回滚本次改动，保留上一次成功的最新构建发布"
