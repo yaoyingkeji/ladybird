@@ -251,9 +251,16 @@ jobs:
           path: .ccache
           key: ccache-${{ runner.os }}-jammy-${{ github.run_id }}
 
+  verify:
+    name: Verify packages
+    needs: build
+    uses: ./.github/workflows/fork-verify.yml
+    with:
+      version: ${{ needs.build.outputs.version }}
+
   release:
     name: Publish release
-    needs: build
+    needs: [build, verify]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -275,7 +282,7 @@ jobs:
           set -euo pipefail
           ls -lh
 
-          # needs: build 已保证构建成功，这里再校验产物完整性。
+          # needs: build 与 verify 已保证构建和测试都通过，这里再校验产物完整性。
           compgen -G './*.AppImage' > /dev/null
           compgen -G './ladybird_*.deb' > /dev/null
           compgen -G './ladybird-dbgsym_*.deb' > /dev/null
