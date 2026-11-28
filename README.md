@@ -14,17 +14,17 @@
 
 | 分支 / Branch | 说明 / Description |
 | --- | --- |
-| [`auto-build`](https://github.com/yaoyingkeji/ladybird/tree/auto-build)（默认 / default） | 上游 `master` + 自动打包工作流 / upstream `master` plus the automated packaging workflows |
+| [`main`](https://github.com/yaoyingkeji/ladybird/tree/main)（默认 / default） | 上游 `master` + 本地化、打包与额外测试 / upstream `master` plus localization, packaging and extra tests |
 | [`master`](https://github.com/yaoyingkeji/ladybird/tree/master) | 上游镜像，保持原样 / unmodified mirror of upstream |
 
 ### 自动构建 / Automated builds
 
-- `auto-build` 分支有代码更新时自动构建（上游同步产生的提交也会触发），也可手动触发 / rebuilt automatically when `auto-build` receives code changes, including commits from upstream sync, and on demand
-- 固定发布 / rolling release: [`auto-daily`](https://github.com/yaoyingkeji/ladybird/releases/tag/auto-daily)，构建成功后覆盖发布包，失败时保持上一次结果 / assets are replaced only after a successful build; failures leave the previous release untouched
+- `main` 分支有代码更新时自动构建（上游同步产生的提交也会触发），也可手动触发 / rebuilt automatically when `main` receives code changes, including commits from upstream sync, and on demand
+- 固定发布 / rolling release: [`auto-latest`](https://github.com/yaoyingkeji/ladybird/releases/tag/auto-latest)，只表示当前最新代码构建成功的结果，每次成功覆盖、失败保持上一次结果 / always the latest successful build; assets are replaced on success and kept on failure
 - 产物 / artifacts: `.deb`（Ubuntu 22.04 构建，x86_64，含 `ladybird-dbgsym`）与 `.AppImage`（x86_64）
 - 版本号 / version: `<上游标签 upstream tag>.auto.<YYYYMMDD>`
-- 下载 / download: [最新构建 auto-daily](https://github.com/yaoyingkeji/ladybird/releases/tag/auto-daily)（标签名沿用 `auto-daily`，历史版本发布仍保留 / the tag name stays `auto-daily`; historical per-version releases are kept）
-- 构建日志 / build logs: [Actions](https://github.com/yaoyingkeji/ladybird/actions/workflows/build-packages.yml)
+- 下载 / download: [最新构建 auto-latest](https://github.com/yaoyingkeji/ladybird/releases/tag/auto-latest)（该标签不保留历史，旧 `auto-<版本>` 发布不再维护 / this tag is rolling; old `auto-<version>` releases are no longer maintained）
+- 构建日志 / build logs: [Actions](https://github.com/yaoyingkeji/ladybird/actions/workflows/fork-build.yml)
 
 ```bash
 # Ubuntu 22.04+ / Debian 12+ / Deepin 25+ (x86_64)
@@ -43,14 +43,14 @@ Build environment: Ubuntu 22.04 with Clang and the `Distribution` preset (LTO, Q
 - 有更新时才同步：所有分支、标签与发布（含发布说明和附件）/ when changes are found, all branches, tags and releases (including notes and assets) are mirrored
 - 标签直接使用上游原始标签对象，打标签者与时间保持不变 / tags are the original upstream tag objects, so the tagger and date are preserved
 - 同步的发布保留上游名称、说明、预发布标记与附件，并在说明顶部记录上游作者和发布时间（GitHub 不允许直接设置这两项）/ mirrored releases keep the upstream name, notes, prerelease flag and assets, and record the upstream author and publish time at the top of the notes (GitHub does not allow setting these two fields directly)
-- 上游 `master` 前进时自动变基 `auto-build`，冲突时改用合并提交 / `auto-build` is rebased onto upstream `master` when it advances, falling back to a merge commit on conflicts
+- 上游 `master` 前进时自动合并到 `main`，fork 自己的提交保持不变 / upstream `master` is merged into `main` when it advances, leaving fork commits untouched
 - 上游没有更新时不产生任何提交或推送 / nothing is committed or pushed when upstream has no changes
 - 同步后的提交者为本仓库账号，不使用机器人身份 / commits created by the sync use this repository's account, not a bot identity
 
 ### 中文界面 / Chinese interface
 
-`auto-build` 分支加入了简体中文界面：菜单、地址栏、查找栏、下载与书签、权限提示、设置页、历史页、证书警告、崩溃报告等均已翻译；未收录的文本自动回退英文。
-The `auto-build` branch adds a Simplified Chinese interface: menus, address bar, find bar, downloads and bookmarks, permission prompts, built-in settings/history pages, certificate warnings, crash reports and more. Untranslated text falls back to English.
+`main` 分支加入了简体中文界面：菜单、地址栏、查找栏、下载与书签、权限提示、设置页、历史页、证书警告、崩溃报告等均已翻译；未收录的文本自动回退英文。
+The `main` branch adds a Simplified Chinese interface: menus, address bar, find bar, downloads and bookmarks, permission prompts, built-in settings/history pages, certificate warnings, crash reports and more. Untranslated text falls back to English.
 
 系统语言为 `zh_*` 时自动启用；也可单独指定 / Enabled automatically when the system locale is `zh_*`, or force it with:
 

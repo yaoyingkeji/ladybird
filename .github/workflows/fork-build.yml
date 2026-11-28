@@ -5,7 +5,7 @@ run-name: "Build latest from ${{ inputs.ref || github.ref_name }}"
 on:
   push:
     branches:
-      - auto-build
+      - main
     # 纯文档改动不触发耗时的打包构建
     paths-ignore:
       - '**.md'
@@ -18,7 +18,7 @@ on:
       ref:
         description: '要构建的分支、标签或提交'
         required: false
-        default: 'auto-build'
+        default: 'main'
         type: string
 
 permissions:
@@ -61,7 +61,7 @@ jobs:
       - name: Check out
         uses: actions/checkout@v7.0.1
         with:
-          ref: ${{ inputs.ref || 'auto-build' }}
+          ref: ${{ inputs.ref || 'main' }}
           fetch-depth: 1
 
       - name: Compute version
@@ -87,7 +87,7 @@ jobs:
 
           commit=$(git rev-parse HEAD)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=auto-daily" >> "$GITHUB_OUTPUT"
+          echo "tag=auto-latest" >> "$GITHUB_OUTPUT"
           echo "upstream=${upstream_tag}@${upstream_sha:0:12}" >> "$GITHUB_OUTPUT"
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
           echo "trigger=$GITHUB_EVENT_NAME" >> "$GITHUB_OUTPUT"

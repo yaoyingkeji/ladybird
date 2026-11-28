@@ -22,10 +22,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - name: Check out auto-build
+      - name: Check out main
         uses: actions/checkout@v7.0.1
         with:
-          ref: auto-build
+          ref: main
           fetch-depth: 0
           # 上游分支可能改动 .github/workflows/ 下的文件，GITHUB_TOKEN 没有 workflows 权限，
           # 因此使用带 workflow 权限的令牌（仓库 secret：SYNC_TOKEN）。
@@ -62,10 +62,10 @@ jobs:
             fi
           done < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/upstream)
 
-          # 分支：上游已删除（auto-build 是本仓库自己的分支，保留）
+          # 分支：上游已删除（main 是本仓库自己的分支，保留）
           while read -r ref; do
             [ "$ref" = "HEAD" ] && continue
-            [ "$ref" = "auto-build" ] && continue
+            [ "$ref" = "main" ] && continue
             if ! git show-ref --verify --quiet "refs/remotes/upstream/$ref"; then
               details+=("分支已删除 \`$ref\`")
               changed=1
@@ -111,7 +111,7 @@ jobs:
             fi
           done < <(gh api --paginate "repos/${UPSTREAM_REPO}/releases?per_page=100" --jq '.[].tag_name')
 
-          # 上游 master 是否前进（决定是否需要 rebase auto-build）
+          # 上游 master 是否前进（决定是否需要合并上游 master 到 main）
           master_changed=false
           if ! git merge-base --is-ancestor refs/remotes/upstream/master HEAD; then
             master_changed=true
@@ -142,19 +142,19 @@ jobs:
           git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" 2>/dev/null || true
           git fetch --prune --force upstream '+refs/heads/*:refs/remotes/upstream/*' '+refs/tags/*:refs/tags/*'
 
-          # 把上游每个分支同步到本仓库（auto-build 是本仓库自己的分支，跳过）
+          # 把上游每个分支同步到本仓库（main 是本仓库自己的分支，跳过）
           while read -r ref; do
             [ "$ref" = "HEAD" ] && continue
-            [ "$ref" = "auto-build" ] && continue
+            [ "$ref" = "main" ] && continue
             echo "同步分支 $ref"
             git push origin "refs/remotes/upstream/$ref:refs/heads/$ref" --force
           done < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/upstream)
 
-          # 删除上游已不存在的分支（保留 auto-build）
+          # 删除上游已不存在的分支（保留 main）
           git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
           while read -r ref; do
             [ "$ref" = "HEAD" ] && continue
-            [ "$ref" = "auto-build" ] && continue
+            [ "$ref" = "main" ] && continue
             if ! git show-ref --verify --quiet "refs/remotes/upstream/$ref"; then
               echo "删除过期分支 $ref"
               git push origin --delete "$ref" || true
@@ -203,7 +203,7 @@ jobs:
             done < <(jq -r '.assets[]?.name' "$work/upstream.json")
           done < <(gh api --paginate "repos/${UPSTREAM_REPO}/releases?per_page=100" --jq '.[].tag_name')
 
-      - name: Rebase auto-build onto upstream master
+      - name: Merge upstream master into main
         if: steps.detect.outputs.master_changed == 'true'
         run: |
           set -euo pipefail
@@ -212,14 +212,11 @@ jobs:
           git fetch upstream master
 
           if git merge-base --is-ancestor upstream/master HEAD; then
-            echo "auto-build 已包含上游 master，无需变基。"
+            echo "main 已包含上游 master，无需合并。"
             exit 0
           fi
 
-          if ! git rebase upstream/master; then
-            echo "变基冲突，改用合并提交。"
-            git rebase --abort || true
-            git merge --no-edit upstream/master
-          fi
-
-          git push origin HEAD:auto-build --force-with-lease
+          # 固定用合并而不是变基：fork 的本地化、打包与测试提交保持原样，
+          # 只有真正改到同一处时才需要解决一次冲突。
+          git merge --no-edit upstream/master
+          git push origin HEAD:main

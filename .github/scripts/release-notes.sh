@@ -42,7 +42,7 @@ cat <<EOF
 
 | 项目 / Item | 值 / Value |
 | --- | --- |
-| 分支 / Branch | \`auto-build\`（本 fork 的默认分支 / default branch of this fork） |
+| 分支 / Branch | \`main\`（本 fork 的开发主线与默认分支 / development and default branch of this fork） |
 | 版本 / Version | \`${VERSION}\` |
 | 标签 / Tag | \`${TAG}\`（滚动标签，始终指向最近一次成功的最新构建 / rolling tag, always points to the latest successful build） |
 | 提交 / Commit | [\`${commit_short}\`](${server}/${repo}/commit/${COMMIT}) |
@@ -88,5 +88,5 @@ chmod +x ladybird-*.AppImage
 
 ## 构建方式 / How it is built
 
-工作流 / workflow: [\`.github/workflows/build-packages.yml\`](${server}/${repo}/blob/auto-build/.github/workflows/build-packages.yml)
+工作流 / workflow: [\`.github/workflows/fork-build.yml\`](${server}/${repo}/blob/main/.github/workflows/fork-build.yml)
 EOF
