@@ -47,19 +47,21 @@ Build environment: Ubuntu 22.04 with Clang and the `Distribution` preset (LTO, Q
 - 上游没有更新时不产生任何提交或推送 / nothing is committed or pushed when upstream has no changes
 - 同步后的提交者为本仓库账号，不使用机器人身份 / commits created by the sync use this repository's account, not a bot identity
 
-### 中文界面 / Chinese interface
+### 界面语言与本地化 / Interface language and localization
 
-`main` 分支加入了简体中文界面：菜单、地址栏、查找栏、下载与书签、权限提示、设置页、历史页、证书警告、崩溃报告等均已翻译；未收录的文本自动回退英文。
-The `main` branch adds a Simplified Chinese interface: menus, address bar, find bar, downloads and bookmarks, permission prompts, built-in settings/history pages, certificate warnings, crash reports and more. Untranslated text falls back to English.
+`main` 分支加入了可扩展的多语言框架：英语为源语言，简体中文为完整语言包（339 条内置页面词条 + 340 条原生界面词条），覆盖菜单、地址栏、查找栏、下载与书签、权限提示、设置页、历史页、证书警告、崩溃报告等；未收录的文本自动回退英文。
+The `main` branch adds an extensible localization framework: English is the source language and Simplified Chinese is a complete language pack (339 built-in page strings plus 340 native UI strings), covering menus, address bar, find bar, downloads and bookmarks, permission prompts, built-in settings/history pages, certificate warnings, crash reports and more. Untranslated text falls back to English.
 
-系统语言为 `zh_*` 时自动启用；也可单独指定 / Enabled automatically when the system locale is `zh_*`, or force it with:
+打开 **设置 → 外观 → 界面语言 / Settings → Appearance → Interface language**，可选择 **跟随系统 / Follow system**、**English** 或 **简体中文**。切换后内置页面立即翻译，原生菜单与对话框同步更新；打开中的静态内置页可能需要重新打开。
+Open **Settings → Appearance → Interface language** and choose **Follow system**, **English** or **简体中文**. Built-in pages retranslate immediately and native menus/dialogs update in place; an already-open static built-in page may need to be reopened.
+
+也可通过环境变量覆盖 / The setting can be overridden for a single run:
 
 ```bash
 LADYBIRD_LANGUAGE=zh-CN ladybird
 ```
 
-内置页面按浏览器的 `navigator.language` 判断语言；如需覆盖，可在页面 URL 后加 `?lang=zh-CN`。
-Built-in pages use the browser's `navigator.language`; append `?lang=zh-CN` to the page URL to override it.
+内置页面还可用 `?lang=zh-CN` 强制中文（优先级高于设置项）/ Built-in pages also accept `?lang=zh-CN`, which takes priority over the setting.
 更新检查与 AppImage 自更新已关闭，构建未做代码签名。/ Update checks and AppImage self-updates are disabled; builds are not code signed.
 
 ## Features

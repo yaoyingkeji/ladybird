@@ -6,6 +6,7 @@
 
 #include <AK/HashMap.h>
 #include <AK/NeverDestroyed.h>
+#include <LibWebView/Application.h>
 #include <LibWebView/WebContentClient.h>
 #include <LibWebView/WebContentPage.h>
 #include <LibWebView/WebUI/ApplicationWebUI.h>
@@ -47,6 +48,12 @@ void ApplicationWebUI::register_interfaces()
 {
     m_id = s_next_id++;
     web_uis().set(m_id, this);
+
+    // Every built-in page loads i18n.js. Give it the language selected in Settings so the pages can switch
+    // immediately without an application restart.
+    register_interface("loadUILanguage"sv, [this](auto const&) {
+        async_send_message("loadUILanguage"sv, Application::settings().appearance().ui_language);
+    });
     if (callbacks().on_open)
         callbacks().on_open(m_id, host(), client().is_private());
 }

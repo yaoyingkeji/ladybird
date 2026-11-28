@@ -48,14 +48,30 @@ jobs:
           set -euo pipefail
           f=Base/res/ladybird/about-pages/i18n.js
           node --check "$f"
+          node --check Base/res/ladybird/about-pages/settings/appearance.js
+
+          # 多语言框架：英语为源语言，简体中文为完整语言包，运行时可切换。
+          grep -qF '"en": {},' "$f"
+          grep -qF '"zh-CN": {' "$f"
+          grep -qF 'window.ladybirdSetUILanguage' "$f"
+          grep -qF 'loadUILanguage' "$f"
+
           count=$(grep -cE '^[[:space:]]*"[^"]+":[[:space:]]*"[^"]*"' "$f" || true)
           echo "译文条目数: $count"
-          [ "$count" -ge 250 ]
+          [ "$count" -ge 330 ]
           for key in 'About Ladybird' 'Settings' 'Bookmarks'; do
             grep -qF "\"$key\":" "$f"
           done
           grep -qF '真正独立的网页浏览器。' "$f"
-          grep -qF 'document.documentElement.lang = "zh-CN"' "$f"
+          grep -qF '界面语言' "$f"
+
+          # 设置页的语言选择项必须写回 Appearance.uiLanguage 并即时生效。
+          grep -qF 'id="ui-language"' Base/res/ladybird/about-pages/settings.html
+          grep -qF 'value="zh-CN"' Base/res/ladybird/about-pages/settings.html
+          grep -qF 'APPEARANCE.uiLanguage' Base/res/ladybird/about-pages/settings/appearance.js
+          grep -qF 'window.ladybirdSetUILanguage' Base/res/ladybird/about-pages/settings/appearance.js
+          grep -qF 'ui_language' Libraries/LibWebView/Settings.h
+          grep -qF 'UI_LANGUAGE_KEY' Libraries/LibWebView/Settings.cpp
 
       - name: Documentation links
         run: |

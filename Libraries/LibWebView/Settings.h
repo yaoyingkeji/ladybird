@@ -65,6 +65,8 @@ enum class ColorTheme : u8 {
 };
 
 struct Appearance {
+    // "system" follows the system locale; otherwise a normalized language code such as "en" or "zh-CN".
+    String ui_language { "system"_string };
     bool show_menu_bar { false };
     bool always_show_scrollbars { false };
     ShowBookmarksBar show_bookmarks_bar { ShowBookmarksBar::Never };

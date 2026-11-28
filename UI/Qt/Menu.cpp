@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <AK/String.h>
 #include <LibURL/Parser.h>
 #include <LibWebView/Application.h>
 #include <LibWebView/HistoryStore.h>
@@ -44,20 +45,23 @@ public:
 
     virtual ~ActionObserver() override
     {
+        remove_language_change_listener(this, &ActionObserver::retranslate_on_language_change);
         QObject::disconnect(m_triggered_connection);
         QObject::disconnect(m_destroyed_connection);
     }
 
     virtual void on_text_changed(Action& action) override
     {
+        m_english_text = action.text();
         if (m_action)
-            m_action->setText(localize(action.text()));
+            m_action->setText(localize(m_english_text));
     }
 
     virtual void on_tooltip_changed(Action& action) override
     {
+        m_english_tooltip = action.tooltip();
         if (m_action)
-            m_action->setToolTip(localize(action.tooltip()));
+            m_action->setToolTip(localize(m_english_tooltip));
     }
 
     virtual void on_enabled_state_changed(Action& action) override
@@ -142,10 +146,26 @@ public:
     }
 
 private:
+    static void retranslate_on_language_change(void* context)
+    {
+        static_cast<ActionObserver*>(context)->retranslate();
+    }
+
+    void retranslate()
+    {
+        if (!m_action)
+            return;
+        if (!m_english_text.is_empty())
+            m_action->setText(localize(m_english_text));
+        if (!m_english_tooltip.is_empty())
+            m_action->setToolTip(localize(m_english_tooltip));
+    }
+
     ActionObserver(Action& action, QAction& qaction, IncludeActionIcon include_action_icon)
         : m_action(&qaction)
         , m_include_action_icon(include_action_icon)
     {
+        add_language_change_listener(this, &ActionObserver::retranslate_on_language_change);
         m_triggered_connection = QObject::connect(m_action, &QAction::triggered, [weak_action = action.make_weak_ptr()](bool checked) {
             if (auto action = weak_action.strong_ref()) {
                 if (action->is_checkable())
@@ -168,6 +188,8 @@ private:
     IncludeActionIcon m_include_action_icon { IncludeActionIcon::Yes };
     QMetaObject::Connection m_triggered_connection;
     QMetaObject::Connection m_destroyed_connection;
+    AK::String m_english_text;
+    AK::String m_english_tooltip;
 };
 
 class MenuObserver final : public Menu::Observer {

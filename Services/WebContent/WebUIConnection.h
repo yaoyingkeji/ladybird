@@ -22,7 +22,8 @@ namespace WebContent {
 
 class WebUIConnection final : public IPC::ConnectionFromClient<WebUIClientEndpoint, WebUIServerEndpoint> {
 public:
-    static ErrorOr<NonnullRefPtr<WebUIConnection>> connect(IPC::TransportHandle, Web::DOM::Document&);
+    static ErrorOr<NonnullRefPtr<WebUIConnection>> connect(IPC::TransportHandle, Web::DOM::Document&, String const& ui_language);
+    void set_ui_language(String const& code);
     virtual ~WebUIConnection() override;
 
     void visit_edges(JS::Cell::Visitor&);
@@ -32,7 +33,7 @@ public:
     Web::DOM::Document const& document() const { return m_document; }
 
 private:
-    WebUIConnection(NonnullOwnPtr<IPC::Transport>, Web::DOM::Document&);
+    WebUIConnection(NonnullOwnPtr<IPC::Transport>, Web::DOM::Document&, String const& ui_language);
 
     virtual void die() override { }
     virtual void send_message(String name, JsonValue data) override;

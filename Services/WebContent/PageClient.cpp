@@ -2636,16 +2636,22 @@ void PageClient::set_webdriver_session_config(Web::WebDriver::UserPromptHandler 
     ensure_webdriver_session().set_session_config(page_load_strategy, strict_file_interactability, timeouts);
 }
 
-ErrorOr<void> PageClient::connect_to_web_ui(IPC::TransportHandle handle)
+ErrorOr<void> PageClient::connect_to_web_ui(IPC::TransportHandle handle, String const& ui_language)
 {
     auto active_document = page().local_traversable()->active_document();
     if (!active_document || !active_document->window())
         return {};
 
     VERIFY(!m_web_ui);
-    m_web_ui = TRY(WebUIConnection::connect(move(handle), *active_document));
+    m_web_ui = TRY(WebUIConnection::connect(move(handle), *active_document, ui_language));
 
     return {};
+}
+
+void PageClient::set_ui_language(String const& code)
+{
+    if (m_web_ui)
+        m_web_ui->set_ui_language(code);
 }
 
 void PageClient::received_message_from_web_ui(Utf16String const& name, JS::Value data)

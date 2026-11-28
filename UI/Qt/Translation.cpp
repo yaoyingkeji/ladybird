@@ -4,11 +4,15 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <AK/Pair.h>
 #include <AK/StringView.h>
+#include <AK/Vector.h>
 #include <UI/Qt/StringUtils.h>
 #include <UI/Qt/Translation.h>
 
+#include <QApplication>
 #include <QByteArray>
+#include <QEvent>
 #include <QHash>
 #include <QLocale>
 #include <QString>
@@ -374,25 +378,83 @@ static constexpr Translation s_simplified_chinese_translations[] = {
 QHash<QByteArray, QString> s_dictionary;
 bool s_initialized { false };
 bool s_enabled { false };
+QString s_language_code { "en" };
+QString s_language_override;
+Vector<Pair<void*, LanguageChangeListener>> s_language_change_listeners;
 
-void initialize()
+// New language packs can be added here without touching any call site: add a translation table above and a mapping
+// below. Unsupported languages intentionally fall back to the original English source strings.
+QString normalize_language_code(QString const& language)
 {
-    s_initialized = true;
+    auto code = language.toLower().replace('_', '-');
+    if (code.isEmpty() || code == "system" || code == "auto")
+        return QLocale::system().name().toLower().replace('_', '-');
+    return code;
+}
 
-    auto language = qEnvironmentVariable("LADYBIRD_LANGUAGE");
+QString resolve_language_code()
+{
+    auto language = s_language_override.isEmpty() ? QString::fromUtf8(qEnvironmentVariable("LADYBIRD_LANGUAGE")) : s_language_override;
     if (language.isEmpty())
         language = QLocale::system().name();
 
-    if (!language.startsWith("zh", Qt::CaseInsensitive))
+    auto code = normalize_language_code(language);
+    if (code.startsWith("zh"))
+        return "zh-CN";
+    return "en";
+}
+
+void rebuild_dictionary()
+{
+    s_dictionary.clear();
+    s_language_code = resolve_language_code();
+    s_enabled = s_language_code == "zh-CN";
+    if (!s_enabled)
         return;
 
-    s_enabled = true;
     s_dictionary.reserve(static_cast<int>(std::size(s_simplified_chinese_translations)));
-
     for (auto const& translation : s_simplified_chinese_translations)
         s_dictionary.insert(QByteArray { translation.english }, QString::fromUtf8(translation.simplified_chinese));
 }
 
+void initialize()
+{
+    s_initialized = true;
+    rebuild_dictionary();
+}
+
+}
+
+QString ui_language_code()
+{
+    if (!s_initialized)
+        initialize();
+    return s_language_code;
+}
+
+void set_ui_language(QString const& code)
+{
+    if (!s_initialized)
+        initialize();
+
+    auto raw = code.trimmed().toLower();
+    auto follows_system = raw.isEmpty() || raw == "system" || raw == "auto";
+    auto normalized = follows_system ? QString {} : normalize_language_code(code);
+    s_language_override = normalized;
+    auto resolved = follows_system ? resolve_language_code() : (normalized.startsWith("zh") ? QString { "zh-CN" } : QString { "en" });
+    if (resolved == s_language_code)
+        return;
+
+    rebuild_dictionary();
+
+    for (auto const& [context, callback] : s_language_change_listeners)
+        callback(context);
+
+    // Let Qt widgets that implement changeEvent() retranslate their tr() strings immediately.
+    QEvent event(QEvent::LanguageChange);
+    QCoreApplication::sendEvent(qApp, &event);
+    for (auto* widget : QApplication::topLevelWidgets())
+        QCoreApplication::sendEvent(widget, &event);
 }
 
 bool ui_translation_enabled()
@@ -400,6 +462,18 @@ bool ui_translation_enabled()
     if (!s_initialized)
         initialize();
     return s_enabled;
+}
+
+void add_language_change_listener(void* context, LanguageChangeListener callback)
+{
+    s_language_change_listeners.append({ context, callback });
+}
+
+void remove_language_change_listener(void* context, LanguageChangeListener callback)
+{
+    s_language_change_listeners.remove_first_matching([&](auto const& listener) {
+        return listener.first == context && listener.second == callback;
+    });
 }
 
 QString localize(AK::StringView text)

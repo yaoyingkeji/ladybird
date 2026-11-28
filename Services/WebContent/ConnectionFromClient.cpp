@@ -503,13 +503,20 @@ void ConnectionFromClient::run_webdriver_user_prompt_handling(Web::PageId page_i
         page->run_webdriver_user_prompt_handling(request_id);
 }
 
-void ConnectionFromClient::connect_to_web_ui(Web::PageId page_id, IPC::TransportHandle handle)
+void ConnectionFromClient::connect_to_web_ui(Web::PageId page_id, IPC::TransportHandle handle, String ui_language)
 {
     if (auto page = this->page(page_id); page.has_value()) {
         // FIXME: Propagate this error back to the browser.
-        if (auto result = page->connect_to_web_ui(move(handle)); result.is_error())
+        if (auto result = page->connect_to_web_ui(move(handle), ui_language); result.is_error())
             dbgln("Unable to connect to the WebUI host: {}", result.error());
     }
+}
+
+void ConnectionFromClient::set_ui_language(String code)
+{
+    page_host().for_each_page([&](auto& page) {
+        page.set_ui_language(code);
+    });
 }
 
 void ConnectionFromClient::disconnect_from_image_decoder()

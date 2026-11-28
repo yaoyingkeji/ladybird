@@ -5,6 +5,7 @@
  */
 
 #include <AK/NeverDestroyed.h>
+#include <LibWebView/Application.h>
 #include <LibIPC/Transport.h>
 #include <LibIPC/TransportHandle.h>
 #include <LibWebView/WebContentClient.h>
@@ -72,7 +73,7 @@ void WebUI::add_application_page(String host, String title)
 }
 
 template<typename WebUIType>
-static ErrorOr<NonnullRefPtr<WebUIType>> create_web_ui(WebContentClient& client, Web::PageId page_id, String host)
+static ErrorOr<NonnullRefPtr<WebUIType>> create_web_ui(WebContentClient& client, Web::PageId page_id, String host, String const& ui_language)
 {
     VERIFY(page_id > 0);
 
@@ -80,7 +81,7 @@ static ErrorOr<NonnullRefPtr<WebUIType>> create_web_ui(WebContentClient& client,
     auto handle = move(paired.remote_handle);
 
     auto web_ui = WebUIType::create(client, page_id, move(paired.local), move(host));
-    client.async_connect_to_web_ui(page_id, move(handle));
+    client.async_connect_to_web_ui(page_id, move(handle), move(ui_language));
 
     return web_ui;
 }
@@ -91,20 +92,27 @@ ErrorOr<RefPtr<WebUI>> WebUI::create(WebContentClient& client, Web::PageId page_
     if (!page.has_value() || page->type == PageType::Static)
         return nullptr;
 
+    // Built-in pages translate themselves with i18n.js. Give every page the language chosen in Settings, including
+    // static pages that have no WebUI message channel. "system" is left empty so the page falls back to its own locale.
+    String ui_language;
+    auto const& configured_language = Application::settings().appearance().ui_language;
+    if (configured_language.is_one_of("zh-CN"sv, "en"sv))
+        ui_language = configured_language;
+
     RefPtr<WebUI> web_ui;
 
     if (page->type == PageType::Application)
-        web_ui = TRY(create_web_ui<ApplicationWebUI>(client, page_id, move(host)));
+        web_ui = TRY(create_web_ui<ApplicationWebUI>(client, page_id, move(host), ui_language));
     else if (page->host == "about"sv)
-        web_ui = TRY(create_web_ui<AboutUI>(client, page_id, move(host)));
+        web_ui = TRY(create_web_ui<AboutUI>(client, page_id, move(host), ui_language));
     else if (page->host == "certificate"sv)
-        web_ui = TRY(create_web_ui<CertificateUI>(client, page_id, move(host)));
+        web_ui = TRY(create_web_ui<CertificateUI>(client, page_id, move(host), ui_language));
     else if (page->host == "crashes"sv)
-        web_ui = TRY(create_web_ui<CrashReportsUI>(client, page_id, move(host)));
+        web_ui = TRY(create_web_ui<CrashReportsUI>(client, page_id, move(host), ui_language));
     else if (page->host.is_one_of("settings"sv, "welcome"sv))
-        web_ui = TRY(create_web_ui<SettingsUI>(client, page_id, move(host)));
+        web_ui = TRY(create_web_ui<SettingsUI>(client, page_id, move(host), ui_language));
     else if (page->host == "support"sv)
-        web_ui = TRY(create_web_ui<SupportUI>(client, page_id, move(host)));
+        web_ui = TRY(create_web_ui<SupportUI>(client, page_id, move(host), ui_language));
 
     VERIFY(web_ui);
     web_ui->register_interfaces();

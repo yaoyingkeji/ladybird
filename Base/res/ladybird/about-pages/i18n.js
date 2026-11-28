@@ -1,7 +1,10 @@
-// 界面中文化：为内置页面（设置、历史、下载、书签、崩溃报告等）提供简体中文文本。
-// 页面加载后翻译静态文本，并通过 MutationObserver 处理脚本动态插入的内容。
+// 界面本地化：为内置页面（设置、历史、下载、书签、崩溃报告等）提供多语言文本。
+// 源语言为英语；缺失的字符串自动回退英语。新增语言只需增加 languagePacks 词条。
+// 语言来源优先级：URL ?lang= > 设置项（C++ 注入 window.__ladybirdLanguage）> 系统语言。
 (() => {
-    const translations = {
+    const languagePacks = {
+        "en": {},
+        "zh-CN": {
         "A truly independent web browser.": "真正独立的网页浏览器。",
         "About Ladybird": "关于 Ladybird",
         "About URLs": "关于 URL",
@@ -270,42 +273,180 @@
         "What were you doing? (optional)": "你当时在做什么？（可选）",
         "Whether websites are asked to show their light or dark design.": "网站应显示浅色还是深色设计。",
         "You can change any of this later in Settings.": "你可以稍后再在设置中更改这些内容。",
-        "Your connection to": "你与"
+        "Your connection to": "你与",
+        "Cancel": "取消",
+        "Canceled": "已取消",
+        "Completed": "已完成",
+        "Downloading": "正在下载",
+        "Failed": "失败",
+        "Failure": "失败",
+        "Files you download in this session will show up here.": "你在本次会话中下载的文件会显示在这里。",
+        "No downloads yet.": "还没有下载内容。",
+        "Open": "打开",
+        "Partial file removed.": "部分文件已移除。",
+        "Pause": "暂停",
+        "Paused": "已暂停",
+        "Resume": "继续",
+        "Show in folder": "在文件夹中显示",
+        "The download failed.": "下载失败。",
+        "The server asked us to slow down, so Ladybird is waiting to retry.": "服务器要求放慢速度，Ladybird 正在等待重试。",
+        "No bookmarks here yet.": "这里还没有书签。",
+        "No bookmarks match your search.": "没有与搜索内容匹配的书签。",
+        "Search results": "搜索结果",
+        "Untitled Folder": "未命名文件夹",
+        "Forget site": "忘记网站",
+        "History entry options": "历史记录选项",
+        "Loading more history…": "正在加载更多历史记录…",
+        "No history entries match this search.": "没有与搜索内容匹配的历史记录。",
+        "Pages you visit will show up here, grouped by day.": "你访问的页面会按天分组显示在这里。",
+        "Yesterday": "昨天",
+        "Couldn’t send": "无法发送",
+        "Hide report": "隐藏报告",
+        "Include website address": "包含网站地址",
+        "Just now": "刚刚",
+        "Sending…": "正在发送…",
+        "Checking…": "正在检查…",
+        "Blocked by": "被阻止： ",
+        "Device": "设备",
+        "Driver": "驱动程序",
+        "Driver version": "驱动版本",
+        "Enabled (forced)": "已启用（强制）",
+        "Hardware": "硬件",
+        "Identity": "标识",
+        "Library": "库",
+        "None described": "未提供描述",
+        "None found": "未找到",
+        "Not described by this build": "此版本未描述",
+        "Not supported": "不支持",
+        "Probe": "探测",
+        "Show": "显示",
+        "Hide": "隐藏",
+        "Software": "软件",
+        "Supported": "支持",
+        "System FFmpeg": "系统 FFmpeg",
+        "Bundled FFmpeg": "内置 FFmpeg",
+        "Vendor and device ID": "厂商和设备 ID",
+        "Video decoding at 1080p": "1080p 视频解码",
+        "Video maintenance 2": "视频维护 2",
+        "Vulkan video decoding": "Vulkan 视频解码",
+        "Has a Vulkan decoder built for its version": "其版本内置 Vulkan 解码器",
+        "DPB and output coincide": "DPB 与输出一致",
+        "DPB and output distinct": "DPB 与输出不同",
+        "DPB supports DRM format modifiers": "DPB 支持 DRM 格式修饰符",
+        "YCbCr sampling": "YCbCr 采样",
+        "AV1 through Vulkan": "通过 Vulkan 的 AV1",
+        "H.264 through Vulkan": "通过 Vulkan 的 H.264",
+        "HEVC through Vulkan": "通过 Vulkan 的 HEVC",
+        "VP9 through Vulkan": "通过 Vulkan 的 VP9",
+        "Always show scrollbars": "始终显示滚动条",
+        "Use client-side window decorations": "使用客户端窗口装饰",
+        "Use custom title bar and window controls instead of the system window frame.": "使用自定义标题栏和窗口控件，而不使用系统窗口边框。",
+        "The licenses could not be loaded.": "无法加载许可证信息。",
+        "Development": "开发版",
+        "Interface language": "界面语言",
+        "Choose the language used by browser pages and menus.": "选择浏览器页面与菜单使用的语言。",
+        "Follow system": "跟随系统",
+        "English": "英语",
+        },
     };
 
-    const dictionary = new Map();
-    for (const [source, translation] of Object.entries(translations))
-        dictionary.set(normalize(source), translation);
+    // 语言别名：把 BCP 47 / Qt 风格的语言代码映射到内置语言包。
+    // 新增语言只需在 languagePacks 增加一张表，并在这里补充别名。
+    const aliases = {
+        "zh": "zh-CN", "zh-cn": "zh-CN", "zh-hans": "zh-CN", "zh-sg": "zh-CN",
+        "zh-my": "zh-CN", "zh-tw": "zh-CN", "zh-hk": "zh-CN", "zh-mo": "zh-CN",
+        "zh-hant": "zh-CN",
+    };
+
+    function normalizeCode(code) {
+        const value = String(code || "").trim().replace(/_/g, "-").toLowerCase();
+        if (!value)
+            return "";
+        if (aliases[value])
+            return aliases[value];
+        if (value.startsWith("zh"))
+            return "zh-CN";
+        if (value.startsWith("en"))
+            return "en";
+        return value;
+    }
+
+    function resolveLanguage() {
+        // 优先级：URL ?lang= > 设置项（由 C++ 注入）> 系统语言。
+        const candidates = [
+            new URLSearchParams(location.search).get("lang"),
+            window.__ladybirdLanguage,
+            navigator.language,
+            ...(navigator.languages || []),
+        ];
+        for (const candidate of candidates) {
+            const code = normalizeCode(candidate);
+            if (code === "en" || languagePacks[code])
+                return code;
+        }
+        return "en";
+    }
+
+    const dictionaries = new Map();
+    for (const [language, translations] of Object.entries(languagePacks)) {
+        const dictionary = new Map();
+        for (const [source, translation] of Object.entries(translations))
+            dictionary.set(normalize(source), translation);
+        dictionaries.set(language, dictionary);
+    }
 
     function normalize(text) {
         return text.replace(/\s+/g, " ").trim();
+    }
+
+    const translated_attributes = ["placeholder", "title", "aria-label", "alt"];
+    const originals = [];
+    let currentLanguage = "en";
+    let applying = false;
+
+    function restoreOriginals() {
+        for (let i = originals.length - 1; i >= 0; --i) {
+            const record = originals[i];
+            if (record.attribute === null) {
+                if (record.node.nodeValue !== record.value)
+                    record.node.nodeValue = record.value;
+            } else if (record.node.getAttribute(record.attribute) !== record.value) {
+                record.node.setAttribute(record.attribute, record.value);
+            }
+        }
+        originals.length = 0;
     }
 
     function translate_text_node(node) {
         const original = node.nodeValue;
         if (!original || !original.trim())
             return;
-
+        const dictionary = dictionaries.get(currentLanguage);
+        if (!dictionary)
+            return;
         const leading = original.match(/^\s*/)[0];
         const trailing = original.match(/\s*$/)[0];
         const core = original.slice(leading.length, original.length - trailing.length);
         const translation = dictionary.get(normalize(core));
         if (translation === undefined || translation === core)
             return;
-
+        originals.push({ node, attribute: null, value: original });
         node.nodeValue = leading + translation + trailing;
     }
 
-    const translated_attributes = ["placeholder", "title", "aria-label", "alt"];
-
     function translate_element(element) {
+        const dictionary = dictionaries.get(currentLanguage);
+        if (!dictionary || !element.hasAttribute)
+            return;
         for (const attribute of translated_attributes) {
-            if (!element.hasAttribute || !element.hasAttribute(attribute))
+            if (!element.hasAttribute(attribute))
                 continue;
             const value = element.getAttribute(attribute);
             const translation = dictionary.get(normalize(value));
-            if (translation !== undefined && translation !== value)
-                element.setAttribute(attribute, translation);
+            if (translation === undefined || translation === value)
+                continue;
+            originals.push({ node: element, attribute, value });
+            element.setAttribute(attribute, translation);
         }
     }
 
@@ -316,10 +457,8 @@
         }
         if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE)
             return;
-
         if (root.nodeType === Node.ELEMENT_NODE)
             translate_element(root);
-
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
         let node = walker.nextNode();
         while (node) {
@@ -332,26 +471,57 @@
     }
 
     function translate_title() {
+        const dictionary = dictionaries.get(currentLanguage);
+        if (!dictionary)
+            return;
         const translation = dictionary.get(normalize(document.title));
         if (translation !== undefined && translation !== document.title)
             document.title = translation;
     }
 
-    function ui_language_is_chinese() {
-        const override = window.__ladybirdLanguage || new URLSearchParams(location.search).get("lang");
-        const language = override || navigator.language || (navigator.languages && navigator.languages[0]) || "";
-        return language.toLowerCase().startsWith("zh");
+    function apply(language) {
+        applying = true;
+        try {
+            restoreOriginals();
+            currentLanguage = language;
+            document.documentElement.lang = language;
+            window.__ladybirdUILanguage = language;
+            if (language === "en")
+                return;
+            translate_subtree(document.body || document.documentElement);
+            translate_title();
+        } finally {
+            applying = false;
+        }
     }
 
-    function start() {
-        if (!ui_language_is_chinese())
+    // 供设置页调用：切换后本页面立即生效，其他页面可监听该事件同步刷新。
+    window.ladybirdSetUILanguage = function (code) {
+        window.__ladybirdLanguage = String(code || "");
+        apply(resolveLanguage());
+        window.dispatchEvent(new CustomEvent("ladybirduilanguagechange", {
+            detail: { language: currentLanguage },
+        }));
+        return currentLanguage;
+    };
+
+    // The native side answers this on every built-in page. "system" means: fall back to navigator.language.
+    document.addEventListener("WebUILoaded", () => {
+        window.ladybird?.sendMessage("loadUILanguage");
+    });
+    document.addEventListener("WebUIMessage", event => {
+        if (event.detail?.name !== "loadUILanguage")
             return;
+        const code = event.detail.data;
+        window.__ladybirdLanguage = code === "system" ? "" : String(code || "");
+        apply(resolveLanguage());
+    });
 
-        document.documentElement.lang = "zh-CN";
-        translate_subtree(document.body || document.documentElement);
-        translate_title();
-
+    function start() {
+        apply(resolveLanguage());
         const observer = new MutationObserver(records => {
+            if (applying || currentLanguage === "en")
+                return;
             for (const record of records) {
                 if (record.type === "characterData") {
                     translate_text_node(record.target);
@@ -366,7 +536,6 @@
             }
             translate_title();
         });
-
         observer.observe(document.documentElement, {
             subtree: true,
             childList: true,

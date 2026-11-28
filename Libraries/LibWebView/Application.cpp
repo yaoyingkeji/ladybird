@@ -135,7 +135,10 @@ struct ApplicationSettingsObserver final : public SettingsObserver {
 
     virtual void appearance_changed() override
     {
-        Application::the().appearance_changed({});
+        auto& application = Application::the();
+        application.appearance_changed({});
+        if (application.on_ui_language_change)
+            application.on_ui_language_change(application.settings().appearance().ui_language);
     }
 
     virtual void tab_settings_changed() override
@@ -3218,6 +3221,12 @@ void Application::update_website_color_scheme()
         view.set_preferred_color_scheme(m_color_scheme);
         return IterationDecision::Continue;
     });
+}
+
+void Application::set_ui_language_in_web_content(String const& code)
+{
+    for (auto& client : m_web_content_clients)
+        client->async_set_ui_language(code);
 }
 
 void Application::appearance_changed(Badge<ApplicationSettingsObserver>)

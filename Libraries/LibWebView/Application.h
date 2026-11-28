@@ -320,6 +320,12 @@ public:
 
     Function<void()> on_compositor_process_death;
 
+    // Set by the UI layer so a language change in Settings can update native menus and dialogs at runtime.
+    Function<void(String)> on_ui_language_change;
+
+    // Propagates the active UI language to every WebContent process so built-in pages can retranslate immediately.
+    void set_ui_language_in_web_content(String const& code);
+
     virtual Optional<ViewImplementation&> active_web_view() const { return {}; }
     virtual Optional<ViewImplementation&> activate_tab_with_url(URL::URL const&, URL::ExcludeFragment) const { return {}; }
 

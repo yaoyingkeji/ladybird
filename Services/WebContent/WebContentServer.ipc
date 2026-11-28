@@ -94,7 +94,8 @@ endpoint WebContentServer routed by Web::PageId page_id
     set_webdriver_session_config(Web::PageId page_id, Web::WebDriver::UserPromptHandler user_prompt_handler, Web::WebDriver::PageLoadStrategy page_load_strategy, bool strict_file_interactability, JsonValue timeouts) =|
     run_webdriver_bidi_command(Web::PageId page_id, u64 command_id, Web::HTML::CrossProcessId navigable_id, String method, JsonValue params) =|
     set_webdriver_bidi_session_state(Web::WebDriver::BiDiSessionState state) =|
-    connect_to_web_ui(Web::PageId page_id, IPC::TransportHandle handle) =|
+    connect_to_web_ui(Web::PageId page_id, IPC::TransportHandle handle, String ui_language) =|
+    set_ui_language(String code) =|
     connect_to_request_server(IPC::TransportHandle handle, int client_id, Optional<Utf16String> top_level_site) =|
     connect_to_test_endpoint(IPC::TransportHandle handle) =|
     disconnect_from_image_decoder() =|

@@ -117,7 +117,8 @@ private:
     virtual void set_webdriver_session_config(Web::PageId page_id, Web::WebDriver::UserPromptHandler user_prompt_handler, Web::WebDriver::PageLoadStrategy page_load_strategy, bool strict_file_interactability, JsonValue timeouts) override;
     virtual void run_webdriver_user_prompt_handling(Web::PageId page_id, u64 request_id) override;
     virtual void did_handle_webdriver_mouse_event(Web::PageId page_id, u64 request_id) override;
-    virtual void connect_to_web_ui(Web::PageId page_id, IPC::TransportHandle handle) override;
+    virtual void connect_to_web_ui(Web::PageId page_id, IPC::TransportHandle handle, String ui_language) override;
+    virtual void set_ui_language(String code) override;
     virtual void connect_to_request_server(IPC::TransportHandle handle, int client_id, Optional<Utf16String> top_level_site) override;
     virtual void connect_to_test_endpoint(IPC::TransportHandle handle) override;
     virtual void disconnect_from_image_decoder() override;

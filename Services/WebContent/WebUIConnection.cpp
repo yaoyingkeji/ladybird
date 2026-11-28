@@ -7,6 +7,7 @@
 #include <AK/JsonObject.h>
 #include <AK/NeverDestroyed.h>
 #include <LibGC/Heap.h>
+#include <LibJS/Runtime/PrimitiveString.h>
 #include <LibWeb/Bindings/PlatformObject.h>
 #include <LibWeb/Bindings/Wrappable.h>
 #include <LibWeb/Bindings/WrapperWorld.h>
@@ -40,19 +41,32 @@ static Utf16FlyString const& web_ui_message_event()
     return *event;
 }
 
-ErrorOr<NonnullRefPtr<WebUIConnection>> WebUIConnection::connect(IPC::TransportHandle handle, Web::DOM::Document& document)
+static JS::PropertyKey const& ui_language_property()
 {
-    auto transport = TRY(handle.create_transport());
-    return adopt_ref(*new WebUIConnection(move(transport), document));
+    static NeverDestroyed<JS::PropertyKey> property { "__ladybirdLanguage"_utf16_fly_string };
+    return *property;
 }
 
-WebUIConnection::WebUIConnection(NonnullOwnPtr<IPC::Transport> transport, Web::DOM::Document& document)
+ErrorOr<NonnullRefPtr<WebUIConnection>> WebUIConnection::connect(IPC::TransportHandle handle, Web::DOM::Document& document, String const& ui_language)
+{
+    auto transport = TRY(handle.create_transport());
+    return adopt_ref(*new WebUIConnection(move(transport), document, ui_language));
+}
+
+WebUIConnection::WebUIConnection(NonnullOwnPtr<IPC::Transport> transport, Web::DOM::Document& document, String const& ui_language)
     : IPC::ConnectionFromClient<WebUIClientEndpoint, WebUIServerEndpoint>(*this, move(transport), 1)
     , m_document(document)
 {
     auto& realm = m_document->relevant_settings_object().realm();
     auto& window = Web::HTML::relevant_window(realm.global_object());
     realm.global_object().define_direct_property(ladybird_property(), Web::Bindings::wrap(Web::Bindings::host_defined_wrapper_world(realm), realm, Web::Internals::WebUI::create(window)), JS::default_attributes);
+
+    if (!ui_language.is_empty()) {
+        realm.global_object().define_direct_property(
+            ui_language_property(),
+            JS::PrimitiveString::create(realm.vm(), Utf16String::from_utf8(ui_language)),
+            JS::default_attributes);
+    }
 
     Web::HTML::queue_a_task(Web::HTML::Task::Source::Unspecified, nullptr, m_document, GC::create_function(GC::Heap::the(), GC::captures(*m_document), [](auto& document) {
         document.dispatch_event(Web::DOM::Event::create(Web::HTML::relevant_global_object(document), web_ui_loaded_event()));
@@ -64,7 +78,9 @@ WebUIConnection::~WebUIConnection()
     if (!m_document->window())
         return;
 
-    (void)m_document->relevant_settings_object().realm().global_object().internal_delete(ladybird_property());
+    auto& global_object = m_document->relevant_settings_object().realm().global_object();
+    (void)global_object.internal_delete(ladybird_property());
+    (void)global_object.internal_delete(ui_language_property());
 }
 
 void WebUIConnection::visit_edges(JS::Cell::Visitor& visitor)
@@ -91,6 +107,11 @@ void WebUIConnection::send_message(String name, JsonValue data)
     }
 
     m_document->dispatch_event(Web::DOM::create_custom_event(realm, web_ui_message_event(), serialized_detail.value()));
+}
+
+void WebUIConnection::set_ui_language(String const& code)
+{
+    send_message("loadUILanguage"_string, JsonValue(code));
 }
 
 void WebUIConnection::received_message_from_web_ui(Utf16String const& name, JS::Value data)

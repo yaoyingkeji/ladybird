@@ -72,7 +72,8 @@ public:
     void webdriver_bidi_event(Web::HTML::CrossProcessId navigable_id, String const& name, JsonValue params);
     void webdriver_bidi_navigation_event(Web::HTML::CrossProcessId navigable_id, StringView name, Optional<Utf16String> const& navigation_id, URL::URL const&);
     void set_webdriver_session_config(Web::WebDriver::UserPromptHandler, Web::WebDriver::PageLoadStrategy, bool strict_file_interactability, JsonValue const& timeouts);
-    ErrorOr<void> connect_to_web_ui(IPC::TransportHandle);
+    ErrorOr<void> connect_to_web_ui(IPC::TransportHandle, String const& ui_language);
+    void set_ui_language(String const& code);
 
     virtual Queue<Web::QueuedInputEvent>& input_event_queue() override;
     virtual void did_handle_input_event(Web::PageId page_id, Web::InputEvent const&) override;

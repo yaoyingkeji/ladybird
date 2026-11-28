@@ -1372,6 +1372,15 @@ void Application::will_create_event_loop(Main::Arguments& arguments)
     // Translate Qt's tr() strings with the same table that the menus and dialogs use. The QApplication owns the
     // translator, so it lives exactly as long as the widgets that ask it for text.
     QCoreApplication::installTranslator(new DictionaryTranslator(m_application.ptr()));
+
+    // Apply the language chosen in Settings before any widget is created, and keep native UI in sync when it changes.
+    WebView::Application::the().on_ui_language_change = [](String code) {
+        Ladybird::set_ui_language(qstring_from_ak_string(code.view()));
+        // "system" is resolved by the native layer; send the concrete code to built-in pages.
+        auto resolved = ak_string_from_qstring(Ladybird::ui_language_code());
+        WebView::Application::the().set_ui_language_in_web_content(resolved);
+    };
+    Ladybird::set_ui_language(qstring_from_ak_string(WebView::Application::settings().appearance().ui_language.view()));
 #if defined(AK_OS_MACOS)
     // NB: Qt owns its converters, and deletes them along with the QApplication.
     new PNGMimeConverter;
