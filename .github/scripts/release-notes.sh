@@ -43,7 +43,7 @@ cat <<EOF
 | --- | --- |
 | 分支 / Branch | \`auto-build\`（本 fork 的默认分支 / default branch of this fork） |
 | 版本 / Version | \`${VERSION}\` |
-| 标签 / Tag | \`${TAG}\` |
+| 标签 / Tag | \`${TAG}\`（滚动标签，始终指向最近一次成功的每日构建 / rolling tag, always points to the latest successful daily build） |
 | 提交 / Commit | [\`${commit_short}\`](${server}/${repo}/commit/${COMMIT}) |
 | 上游基线 / Upstream base | \`${UPSTREAM}\` |
 | 触发方式 / Trigger | ${trigger} |
@@ -55,7 +55,9 @@ cat <<EOF
 | 文件 / File | 大小 / Size |
 | --- | --- |
 ${rows}
-校验和 / Checksums: \`SHA256SUMS.txt\`
+校验和 / Checksums: \`SHA256SUMS-${VERSION}.txt\`（本版本 / this build）、\`SHA256SUMS.txt\`（始终指向最近一次构建 / always the latest build）
+
+固定下载地址 / Stable download: [${TAG}](${server}/${repo}/releases/tag/${TAG})（每次成功构建覆盖 / replaced on every successful build）
 
 ## 安装 / Installation
 

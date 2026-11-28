@@ -19,10 +19,11 @@
 
 ### 自动构建 / Automated builds
 
-- 每日 UTC 02:00 定时构建，也可手动触发 / built daily at 02:00 UTC, and on demand
+- 每日 UTC 02:00 用 `auto-build` 最新代码构建一次，也可手动触发 / built daily at 02:00 UTC from the latest `auto-build` commit, and on demand
+- 固定发布 / rolling release: [`auto-daily`](https://github.com/yaoyingkeji/ladybird/releases/tag/auto-daily)，构建成功后覆盖发布包，失败时保持上一次结果 / assets are replaced only after a successful build; failures leave the previous release untouched
 - 产物 / artifacts: `.deb`（Ubuntu 22.04 构建，x86_64，含 `ladybird-dbgsym`）与 `.AppImage`（x86_64）
 - 版本号 / version: `<上游标签 upstream tag>.auto.<YYYYMMDD>`
-- 下载 / download: [Releases](https://github.com/yaoyingkeji/ladybird/releases/latest)
+- 下载 / download: [每日构建 auto-daily](https://github.com/yaoyingkeji/ladybird/releases/tag/auto-daily)（历史版本发布仍保留 / historical per-version releases are kept）
 - 构建日志 / build logs: [Actions](https://github.com/yaoyingkeji/ladybird/actions/workflows/build-packages.yml)
 
 ```bash

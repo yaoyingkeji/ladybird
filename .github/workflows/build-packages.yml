@@ -57,7 +57,7 @@ jobs:
       - name: Check out
         uses: actions/checkout@v7.0.1
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ inputs.ref || 'auto-build' }}
           fetch-depth: 1
 
       - name: Compute version
@@ -83,7 +83,7 @@ jobs:
 
           commit=$(git rev-parse HEAD)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=auto-$version" >> "$GITHUB_OUTPUT"
+          echo "tag=auto-daily" >> "$GITHUB_OUTPUT"
           echo "upstream=${upstream_tag}@${upstream_sha:0:12}" >> "$GITHUB_OUTPUT"
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
           echo "trigger=$GITHUB_EVENT_NAME" >> "$GITHUB_OUTPUT"
@@ -193,6 +193,8 @@ jobs:
 
       - name: Write checksums
         working-directory: Build/packages
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           # GitHub 会把发布文件名里的 ~ 替换成 .，这里先统一改名，保证校验和与下载到的文件一致。
           for file in ./*.AppImage ./*.deb; do
@@ -201,6 +203,7 @@ jobs:
             esac
           done
           sha256sum ./*.AppImage ./*.deb > SHA256SUMS.txt
+          cp SHA256SUMS.txt "SHA256SUMS-$VERSION.txt"
           cat SHA256SUMS.txt
 
       - name: Generate release notes
@@ -233,6 +236,7 @@ jobs:
           name: metadata
           path: |
             Build/packages/SHA256SUMS.txt
+            Build/packages/SHA256SUMS-*.txt
             Build/packages/notes.md
           if-no-files-found: error
 
@@ -261,13 +265,135 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.build.outputs.tag }}
           VERSION: ${{ needs.build.outputs.version }}
+          COMMIT: ${{ needs.build.outputs.commit }}
+        working-directory: assets
         run: |
           set -euo pipefail
-          ls -lh assets
-          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
-          gh release create "$TAG" \
-            assets/*.AppImage assets/*.deb assets/SHA256SUMS.txt \
+          ls -lh
+
+          # needs: build 已保证构建成功，这里再校验产物完整性。
+          compgen -G './*.AppImage' > /dev/null
+          compgen -G './ladybird_*.deb' > /dev/null
+          compgen -G './ladybird-dbgsym_*.deb' > /dev/null
+          test -s notes.md
+          sha256sum -c SHA256SUMS.txt
+
+          # 记录覆盖前的发布状态和资产列表，供提交阶段清理和失败回滚。
+          created=0
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" \
+              --jq '{id,name,body,make_latest:"true"}' > ../old-release.json 2>/dev/null; then
+            gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" \
+              --jq '.object.sha' > ../old-tag-sha.txt 2>/dev/null || true
+          else
+            : > ../old-release.json
+          fi
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --json assets --jq '.assets[].name' > ../old-assets.txt 2>/dev/null || true
+          echo "$created" > ../created-new.txt
+
+          : > ../new-assets.txt
+          for file in ./*.AppImage ./*.deb "./SHA256SUMS-$VERSION.txt" ./SHA256SUMS.txt; do
+            basename "$file" >> ../new-assets.txt
+          done
+
+          # 第一次运行时创建固定标签的发布，之后一直复用同一个发布。
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Ladybird $VERSION · 每日自动构建 / daily auto build" \
+              --notes-file notes.md \
+              --latest
+            created=1
+            echo "$created" > ../created-new.txt
+            gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --json assets --jq '.assets[].name' > ../old-assets.txt || true
+          fi
+
+          # 备份固定名的校验和，失败时可恢复；它作为提交点的一部分最后才覆盖。
+          mkdir -p ../old-checksum
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+            -p 'SHA256SUMS.txt' -D ../old-checksum 2>/dev/null || true
+
+          # 先上传带版本号的新资产并核对，此时发布说明和标签仍指向上一次成功构建。
+          while IFS= read -r name; do
+            [ -n "$name" ] || continue
+            [ "$name" = 'SHA256SUMS.txt' ] && continue
+            gh release upload "$TAG" "$name" --repo "$GITHUB_REPOSITORY" --clobber
+          done < ../new-assets.txt
+
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --json assets --jq '.assets[].name' > ../uploaded.txt
+          while IFS= read -r name; do
+            [ -n "$name" ] || continue
+            [ "$name" = 'SHA256SUMS.txt' ] && continue
+            grep -qxF "$name" ../uploaded.txt || { echo "缺少资产 $name"; exit 1; }
+          done < ../new-assets.txt
+
+          # 提交点：覆盖校验和指针 -> 更新说明与标题 -> 移动固定标签 -> 删除旧资产。
+          gh release upload "$TAG" SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          gh release edit "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Ladybird $VERSION · 自动构建 / auto build" \
-            --notes-file assets/notes.md \
+            --title "Ladybird $VERSION · 每日自动构建 / daily auto build" \
+            --notes-file notes.md \
             --latest
+
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" > /dev/null 2>&1; then
+            jq -n --arg sha "$COMMIT" '{sha:$sha,force:true}' > ../ref-update.json
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" \
+              --input ../ref-update.json > /dev/null
+          else
+            jq -n --arg ref "refs/tags/$TAG" --arg sha "$COMMIT" \
+              '{ref:$ref,sha:$sha}' > ../ref-update.json
+            gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              --input ../ref-update.json > /dev/null
+          fi
+
+          comm -23 <(sort ../old-assets.txt) <(sort ../new-assets.txt) \
+            | while IFS= read -r name; do
+                [ -n "$name" ] || continue
+                gh release delete-asset "$TAG" "$name" \
+                  --repo "$GITHUB_REPOSITORY" --yes || true
+              done
+
+          echo "每日构建发布已更新：$TAG -> $VERSION ($COMMIT)"
+
+      - name: Restore the previous release on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          cd assets 2>/dev/null || exit 0
+
+          # 恢复上一次发布的标题、说明和标签指向，然后删除本次新增的资产。
+          if [ -s ../old-release.json ]; then
+            id=$(jq -r .id ../old-release.json)
+            jq 'del(.id)' ../old-release.json > ../restore-release.json
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$id" \
+              --input ../restore-release.json > /dev/null || true
+          fi
+          if [ -s ../old-tag-sha.txt ]; then
+            sha=$(cat ../old-tag-sha.txt)
+            jq -n --arg sha "$sha" '{sha:$sha,force:true}' > ../restore-ref.json
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" \
+              --input ../restore-ref.json > /dev/null || true
+          fi
+          if [ -f ../created-new.txt ] && [ "$(cat ../created-new.txt)" = 1 ]; then
+            gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+            exit 0
+          fi
+          if [ -f ../old-checksum/SHA256SUMS.txt ]; then
+            gh release upload "$TAG" ../old-checksum/SHA256SUMS.txt \
+              --repo "$GITHUB_REPOSITORY" --clobber || true
+          fi
+          if [ -f ../old-assets.txt ] && [ -f ../new-assets.txt ]; then
+            comm -23 <(sort ../new-assets.txt) <(sort ../old-assets.txt) \
+              | while IFS= read -r name; do
+                  [ -n "$name" ] || continue
+                  gh release delete-asset "$TAG" "$name" \
+                    --repo "$GITHUB_REPOSITORY" --yes || true
+                done
+          fi
+          echo "已回滚本次改动，保留上一次成功的每日构建发布"
